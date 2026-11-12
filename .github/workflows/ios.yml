@@ -1,0 +1,67 @@
+name: iOS build
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      signed:
+        description: "Build a signed IPA (requires Apple secrets)"
+        type: boolean
+        default: false
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test
+
+      - name: Build (no codesign)
+        if: ${{ !inputs.signed }}
+        run: flutter build ios --release --no-codesign
+
+      - name: Install certificate and provisioning profile
+        if: ${{ inputs.signed }}
+        env:
+          CERT_B64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          CERT_PASS: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          PROFILE_B64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASS: ${{ github.run_id }}
+        run: |
+          KC=$RUNNER_TEMP/build.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASS" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KEYCHAIN_PASS" "$KC"
+          echo "$CERT_B64" | base64 -d > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASS" -A -t cert -f pkcs12 -k "$KC"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASS" "$KC"
+          security list-keychains -d user -s "$KC" login.keychain
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "$PROFILE_B64" | base64 -d > "$HOME/Library/MobileDevice/Provisioning Profiles/app.mobileprovision"
+
+      - name: Build signed IPA
+        if: ${{ inputs.signed }}
+        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload to TestFlight (optional)
+        if: ${{ inputs.signed && vars.UPLOAD_TESTFLIGHT == 'true' }}
+        env:
+          API_KEY_B64: ${{ secrets.APPSTORE_API_KEY_P8_BASE64 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$API_KEY_B64" | base64 -d > ~/.appstoreconnect/private_keys/AuthKey_$API_KEY_ID.p8
+          xcrun altool --upload-app --type ios -f build/ios/ipa/*.ipa \
+            --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: |
+            build/ios/ipa/*.ipa
+            build/ios/iphoneos/Runner.app
