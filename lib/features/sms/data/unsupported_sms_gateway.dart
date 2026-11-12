@@ -6,6 +6,7 @@ class UnsupportedSmsGateway implements SmsGateway {
   @override
   Future<bool> requestPermission() async => false;
   @override
-  Future<List<RawSms>> fetchFrom(Set<String> senders, {DateTime? since}) async =>
+  Future<List<RawSms>> fetchFrom(Set<String> senders,
+          {DateTime? since}) async =>
       const [];
 }
