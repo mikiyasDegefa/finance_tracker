@@ -19,23 +19,11 @@ jobs:
           channel: stable
           cache: true
 
-      # Make sure Flutter/Gradle really use JDK 21 (the lint crash needs it).
+      # Gradle must run on the JDK setup-java installed, not a bundled JDK 17.
       - name: Use JDK 21 for Flutter
         run: |
           flutter config --jdk-dir "$JAVA_HOME"
           java -version
-
-      # AGP "lintVital" crashes on some setups and is not needed to build the app.
-      - name: Disable lintVital (Gradle init script)
-        run: |
-          mkdir -p ~/.gradle/init.d
-          cat > ~/.gradle/init.d/disable-lint-vital.gradle <<'GRADLE'
-          gradle.allprojects {
-              tasks.configureEach { t ->
-                  if (t.name.startsWith("lintVital")) { t.enabled = false }
-              }
-          }
-          GRADLE
 
       - run: flutter pub get
       - run: flutter test
