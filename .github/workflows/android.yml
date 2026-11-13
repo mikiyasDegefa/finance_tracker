@@ -1,6 +1,7 @@
 name: Android build
 on:
   push:
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 jobs:
@@ -8,6 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Proof of what this run actually builds.
+      - name: Build context
+        run: |
+          git rev-parse HEAD
+          grep -n "lintVital" android/build.gradle.kts || echo "NO lintVital skip in android/build.gradle.kts"
+          grep -n "com.android.application" android/settings.gradle.kts
 
       - uses: actions/setup-java@v4
         with:
