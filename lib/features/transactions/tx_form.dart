@@ -38,8 +38,18 @@ class _TxFormState extends ConsumerState<TxForm> {
   String? _error;
 
   List<TextEditingController> get _all => [
-        _amount, _name, _remark, _kind, _from, _to, _cpAccount, _fee, _receipt,
-        _category, _desc, _ref,
+        _amount,
+        _name,
+        _remark,
+        _kind,
+        _from,
+        _to,
+        _cpAccount,
+        _fee,
+        _receipt,
+        _category,
+        _desc,
+        _ref,
       ];
 
   @override
@@ -58,7 +68,8 @@ class _TxFormState extends ConsumerState<TxForm> {
       _from.text = e.fromParty ?? '';
       _to.text = e.toParty ?? '';
       _cpAccount.text = e.counterpartyAccount ?? '';
-      _fee.text = e.serviceChargeMinor == 0 ? '' : formatMinor(e.serviceChargeMinor);
+      _fee.text =
+          e.serviceChargeMinor == 0 ? '' : formatMinor(e.serviceChargeMinor);
       _receipt.text = e.receiptUrl ?? '';
       _category.text = e.category ?? '';
       _desc.text = e.description ?? '';
@@ -84,7 +95,8 @@ class _TxFormState extends ConsumerState<TxForm> {
       lastDate: DateTime.now().add(const Duration(days: 1)),
     );
     if (d != null) {
-      setState(() => _date = DateTime(d.year, d.month, d.day, _date.hour, _date.minute));
+      setState(() =>
+          _date = DateTime(d.year, d.month, d.day, _date.hour, _date.minute));
     }
   }
 
@@ -135,7 +147,9 @@ class _TxFormState extends ConsumerState<TxForm> {
   }
 
   void _delete() {
-    ref.read(repoProvider)!.deleteTransaction(ref.read(workspaceIdProvider)!, widget.edit!.id);
+    ref
+        .read(repoProvider)!
+        .deleteTransaction(ref.read(workspaceIdProvider)!, widget.edit!.id);
     Navigator.pop(context);
   }
 
@@ -164,10 +178,12 @@ class _TxFormState extends ConsumerState<TxForm> {
             e.receiptUrl != null);
     const money = TextInputType.numberWithOptions(decimal: true);
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text(e == null ? 'New transaction' : 'Edit transaction',
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
@@ -175,7 +191,8 @@ class _TxFormState extends ConsumerState<TxForm> {
             value: _accountId,
             decoration: const InputDecoration(labelText: 'Account'),
             items: [
-              for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.label)),
+              for (final a in accounts)
+                DropdownMenuItem(value: a.id, child: Text(a.label)),
             ],
             onChanged: (v) => setState(() => _accountId = v),
           ),
@@ -220,7 +237,8 @@ class _TxFormState extends ConsumerState<TxForm> {
             ),
           const SizedBox(height: 12),
           Row(children: [
-            if (e != null) TextButton(onPressed: _delete, child: const Text('Delete')),
+            if (e != null)
+              TextButton(onPressed: _delete, child: const Text('Delete')),
             const Spacer(),
             FilledButton(onPressed: _save, child: const Text('Save')),
           ]),

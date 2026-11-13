@@ -22,7 +22,8 @@ class AppDatabase {
     final cipher = db.select('PRAGMA cipher_version;');
     if (cipher.isEmpty) {
       db.dispose();
-      throw StateError('SQLCipher is not available; refusing to open an unencrypted database.');
+      throw StateError(
+          'SQLCipher is not available; refusing to open an unencrypted database.');
     }
     db.execute("PRAGMA key = \"x'$hexKey'\";");
     db.select('SELECT count(*) FROM sqlite_master;'); // fails if key is wrong

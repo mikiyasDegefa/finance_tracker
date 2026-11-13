@@ -29,14 +29,17 @@ class DashboardScreen extends ConsumerWidget {
       Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('This month (${month.year}-${month.month.toString().padLeft(2, '0')})',
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+                'This month (${month.year}-${month.month.toString().padLeft(2, '0')})',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             Row(children: [
               Expanded(child: _Figure('Credits', totals.credit, Colors.green)),
               Expanded(child: _Figure('Debits', totals.debit, Colors.red)),
-              Expanded(child: _Figure('Net', totals.credit - totals.debit, null)),
+              Expanded(
+                  child: _Figure('Net', totals.credit - totals.debit, null)),
             ]),
           ]),
         ),
@@ -55,8 +58,10 @@ class DashboardScreen extends ConsumerWidget {
           ),
       ],
       const SizedBox(height: 8),
-      Text('Recent transactions', style: Theme.of(context).textTheme.titleMedium),
-      if (recent.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('Nothing yet.')),
+      Text('Recent transactions',
+          style: Theme.of(context).textTheme.titleMedium),
+      if (recent.isEmpty)
+        const Padding(padding: EdgeInsets.all(8), child: Text('Nothing yet.')),
       for (final t in recent)
         TxTile(tx: t, accountName: names[t.accountId] ?? '?'),
     ]);

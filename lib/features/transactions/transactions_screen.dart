@@ -20,7 +20,8 @@ String txSummary(Tx t) {
 }
 
 class TxTile extends StatelessWidget {
-  const TxTile({super.key, required this.tx, required this.accountName, this.onTap});
+  const TxTile(
+      {super.key, required this.tx, required this.accountName, this.onTap});
   final Tx tx;
   final String accountName;
   final VoidCallback? onTap;
@@ -33,7 +34,8 @@ class TxTile extends StatelessWidget {
         (tx.kind == null ? (tx.isCredit ? 'Credit' : 'Debit') : cap(tx.kind!));
     final summary = txSummary(tx);
     final extras = <String>[
-      if (tx.serviceChargeMinor != 0) 'service charge ${formatMinor(tx.serviceChargeMinor)}',
+      if (tx.serviceChargeMinor != 0)
+        'service charge ${formatMinor(tx.serviceChargeMinor)}',
       if (tx.receiptUrl != null) 'receipt link',
       if (tx.remark != null) 'remark: ${tx.remark}',
     ].join(' · ');
@@ -42,12 +44,15 @@ class TxTile extends StatelessWidget {
           () => Navigator.of(context).push(MaterialPageRoute<void>(
               builder: (_) => TxDetailScreen(txId: tx.id))),
       isThreeLine: summary.isNotEmpty || extras.isNotEmpty,
-      leading: CircleAvatar(child: Icon(tx.isCredit ? Icons.south_west : Icons.north_east)),
+      leading: CircleAvatar(
+          child: Icon(tx.isCredit ? Icons.south_west : Icons.north_east)),
       title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('$accountName · ${fmtDate(tx.occurredAt)}'),
-        if (summary.isNotEmpty) Text(summary, maxLines: 2, overflow: TextOverflow.ellipsis),
-        if (extras.isNotEmpty) Text(extras, maxLines: 2, overflow: TextOverflow.ellipsis),
+        if (summary.isNotEmpty)
+          Text(summary, maxLines: 2, overflow: TextOverflow.ellipsis),
+        if (extras.isNotEmpty)
+          Text(extras, maxLines: 2, overflow: TextOverflow.ellipsis),
       ]),
       trailing: Text(
         '${tx.isCredit ? '+' : '-'}${formatMinor(tx.amountMinor)}',
@@ -140,7 +145,8 @@ class _TransactionsState extends ConsumerState<TransactionsScreen> {
               ),
             ),
             if (filter.isActive)
-              TextButton(onPressed: _clearAll, child: const Text('Clear filters')),
+              TextButton(
+                  onPressed: _clearAll, child: const Text('Clear filters')),
           ]),
         ),
       Expanded(
@@ -151,8 +157,8 @@ class _TransactionsState extends ConsumerState<TransactionsScreen> {
                     : 'No transactions match your filters.'))
             : ListView.builder(
                 itemCount: txs.length,
-                itemBuilder: (_, i) =>
-                    TxTile(tx: txs[i], accountName: names[txs[i].accountId] ?? '?'),
+                itemBuilder: (_, i) => TxTile(
+                    tx: txs[i], accountName: names[txs[i].accountId] ?? '?'),
               ),
       ),
     ]);
@@ -241,11 +247,14 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
     final accounts = ref.watch(accountsProvider);
     const money = TextInputType.numberWithOptions(decimal: true);
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('Filter transactions', style: Theme.of(context).textTheme.titleLarge),
+        child:
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('Filter transactions',
+              style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           SegmentedButton<String>(
             segments: const [
@@ -261,7 +270,8 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
             value: _account,
             decoration: const InputDecoration(labelText: 'Account'),
             items: [
-              const DropdownMenuItem<int?>(value: null, child: Text('All accounts')),
+              const DropdownMenuItem<int?>(
+                  value: null, child: Text('All accounts')),
               for (final a in accounts)
                 DropdownMenuItem<int?>(value: a.id, child: Text(a.label)),
             ],

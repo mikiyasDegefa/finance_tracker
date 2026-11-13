@@ -7,8 +7,9 @@ import 'parsing_engine.dart';
 class TemplatesScreen extends ConsumerWidget {
   const TemplatesScreen({super.key});
 
-  void _open(BuildContext context, SmsTemplate? t) => Navigator.of(context)
-      .push(MaterialPageRoute<void>(builder: (_) => TemplateEditorScreen(template: t)));
+  void _open(BuildContext context, SmsTemplate? t) =>
+      Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => TemplateEditorScreen(template: t)));
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,7 +24,8 @@ class TemplatesScreen extends ConsumerWidget {
         for (final t in list)
           ListTile(
             title: Text(t.name),
-            subtitle: Text('Amount: ${t.amountRegex}', maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text('Amount: ${t.amountRegex}',
+                maxLines: 1, overflow: TextOverflow.ellipsis),
             onTap: () => _open(context, t),
             trailing: IconButton(
               icon: const Icon(Icons.delete_outline),
@@ -63,9 +65,12 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
     super.initState();
     final t = widget.template;
     _name = TextEditingController(text: t?.name ?? '');
-    _credit = TextEditingController(text: t?.creditKeywords ?? 'credited,received,deposited');
-    _debit = TextEditingController(text: t?.debitKeywords ?? 'debited,withdrawn,paid,transferred');
-    _amount = TextEditingController(text: t?.amountRegex ?? r'(?:ETB|Birr)\s*([\d,]+(?:\.\d+)?)');
+    _credit = TextEditingController(
+        text: t?.creditKeywords ?? 'credited,received,deposited');
+    _debit = TextEditingController(
+        text: t?.debitKeywords ?? 'debited,withdrawn,paid,transferred');
+    _amount = TextEditingController(
+        text: t?.amountRegex ?? r'(?:ETB|Birr)\s*([\d,]+(?:\.\d+)?)');
     _balance = TextEditingController(text: t?.balanceRegex ?? '');
     _reference = TextEditingController(text: t?.referenceRegex ?? '');
     _cp = TextEditingController(text: t?.counterpartyRegex ?? '');
@@ -79,8 +84,19 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
   @override
   void dispose() {
     for (final c in [
-      _name, _credit, _debit, _amount, _balance, _reference, _cp, _from, _to,
-      _cpAcct, _fee, _receipt, _sample
+      _name,
+      _credit,
+      _debit,
+      _amount,
+      _balance,
+      _reference,
+      _cp,
+      _from,
+      _to,
+      _cpAcct,
+      _fee,
+      _receipt,
+      _sample
     ]) {
       c.dispose();
     }
@@ -98,22 +114,27 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
         counterpartyRegex: _cp.text.trim().isEmpty ? null : _cp.text,
         fromRegex: _from.text.trim().isEmpty ? null : _from.text,
         toRegex: _to.text.trim().isEmpty ? null : _to.text,
-        counterpartyAccountRegex: _cpAcct.text.trim().isEmpty ? null : _cpAcct.text,
+        counterpartyAccountRegex:
+            _cpAcct.text.trim().isEmpty ? null : _cpAcct.text,
         serviceChargeRegex: _fee.text.trim().isEmpty ? null : _fee.text,
         receiptRegex: _receipt.text.trim().isEmpty ? null : _receipt.text,
       );
 
   void _save() {
     if (_name.text.trim().isEmpty || _amount.text.trim().isEmpty) return;
-    ref.read(repoProvider)!.saveTemplate(ref.read(workspaceIdProvider)!, _build());
+    ref
+        .read(repoProvider)!
+        .saveTemplate(ref.read(workspaceIdProvider)!, _build());
     Navigator.pop(context);
   }
 
-  Widget _field(TextEditingController c, String label, {String? help}) => Padding(
+  Widget _field(TextEditingController c, String label, {String? help}) =>
+      Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: TextField(
           controller: c,
-          decoration: InputDecoration(labelText: label, helperText: help, helperMaxLines: 2),
+          decoration: InputDecoration(
+              labelText: label, helperText: help, helperMaxLines: 2),
         ),
       );
 
@@ -127,11 +148,15 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
       ),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         _field(_name, 'Template name'),
-        _field(_credit, 'Credit keywords', help: 'Comma separated words that mean money came in'),
-        _field(_debit, 'Debit keywords', help: 'Comma separated words that mean money went out'),
-        _field(_amount, 'Amount regex', help: 'Capture group 1 must be the number, e.g. ETB\\s*([\\d,.]+)'),
+        _field(_credit, 'Credit keywords',
+            help: 'Comma separated words that mean money came in'),
+        _field(_debit, 'Debit keywords',
+            help: 'Comma separated words that mean money went out'),
+        _field(_amount, 'Amount regex',
+            help: 'Capture group 1 must be the number, e.g. ETB\\s*([\\d,.]+)'),
         _field(_balance, 'Balance regex (optional)'),
-        _field(_reference, 'Reference regex (optional)', help: 'Used to prevent duplicates'),
+        _field(_reference, 'Reference regex (optional)',
+            help: 'Used to prevent duplicates'),
         _field(_cp, 'Counterparty name regex (optional)'),
         _field(_from, 'From regex (optional)', help: 'Who the money came from'),
         _field(_to, 'To regex (optional)', help: 'Who the money was sent to'),
@@ -140,7 +165,8 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
         _field(_receipt, 'Receipt link regex (optional)',
             help: 'Leave empty to use the first http(s) link in the SMS'),
         const Divider(),
-        Text('Test with a real SMS', style: Theme.of(context).textTheme.titleMedium),
+        Text('Test with a real SMS',
+            style: Theme.of(context).textTheme.titleMedium),
         TextField(
           controller: _sample,
           maxLines: 5,
@@ -150,7 +176,8 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
         Align(
           alignment: Alignment.centerLeft,
           child: FilledButton(
-            onPressed: () => setState(() => _result = ParsingEngine.parse(_sample.text, _build())),
+            onPressed: () => setState(
+                () => _result = ParsingEngine.parse(_sample.text, _build())),
             child: const Text('Test'),
           ),
         ),
@@ -158,26 +185,30 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Direction: ${r.direction ?? '-'}'),
-                Text('Keyword: ${r.keyword ?? '-'}'),
-                Text('From: ${r.fromParty ?? '-'}'),
-                Text('To: ${r.toParty ?? '-'}'),
-                Text('Recipient account: ${r.counterpartyAccount ?? '-'}'),
-                Text(
-                    'Service charge: ${r.serviceChargeMinor == null ? '-' : formatMinor(r.serviceChargeMinor!)}'),
-                Text('Receipt link: ${r.receiptUrl ?? '-'}'),
-                Text('Amount: ${r.amountMinor == null ? '-' : formatMinor(r.amountMinor!)}'),
-                Text('Balance: ${r.balanceMinor == null ? '-' : formatMinor(r.balanceMinor!)}'),
-                Text('Reference: ${r.reference ?? '-'}'),
-                Text('Counterparty: ${r.counterparty ?? '-'}'),
-                Text('Currency: ${r.currency ?? '-'}'),
-                Text(r.isHighConfidence
-                    ? 'High confidence (will auto-save in hybrid mode)'
-                    : r.isValid
-                        ? 'Valid, but no reference (hybrid mode will ask you to review)'
-                        : 'Not valid: ${r.errors.join('; ')}'),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Direction: ${r.direction ?? '-'}'),
+                    Text('Keyword: ${r.keyword ?? '-'}'),
+                    Text('From: ${r.fromParty ?? '-'}'),
+                    Text('To: ${r.toParty ?? '-'}'),
+                    Text('Recipient account: ${r.counterpartyAccount ?? '-'}'),
+                    Text(
+                        'Service charge: ${r.serviceChargeMinor == null ? '-' : formatMinor(r.serviceChargeMinor!)}'),
+                    Text('Receipt link: ${r.receiptUrl ?? '-'}'),
+                    Text(
+                        'Amount: ${r.amountMinor == null ? '-' : formatMinor(r.amountMinor!)}'),
+                    Text(
+                        'Balance: ${r.balanceMinor == null ? '-' : formatMinor(r.balanceMinor!)}'),
+                    Text('Reference: ${r.reference ?? '-'}'),
+                    Text('Counterparty: ${r.counterparty ?? '-'}'),
+                    Text('Currency: ${r.currency ?? '-'}'),
+                    Text(r.isHighConfidence
+                        ? 'High confidence (will auto-save in hybrid mode)'
+                        : r.isValid
+                            ? 'Valid, but no reference (hybrid mode will ask you to review)'
+                            : 'Not valid: ${r.errors.join('; ')}'),
+                  ]),
             ),
           ),
       ]),

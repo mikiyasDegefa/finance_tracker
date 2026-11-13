@@ -17,7 +17,8 @@ Future<bool> biometricAuth(String reason) async {
   try {
     return await LocalAuthentication().authenticate(
       localizedReason: reason,
-      options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+      options:
+          const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
     );
   } catch (_) {
     return false;
@@ -232,7 +233,9 @@ class _LockState extends ConsumerState<LockScreen> {
                           style: const TextStyle(color: Colors.red)),
                     ),
                   const SizedBox(height: 16),
-                  FilledButton(onPressed: _busy ? null : _submit, child: const Text('Unlock')),
+                  FilledButton(
+                      onPressed: _busy ? null : _submit,
+                      child: const Text('Unlock')),
                   TextButton.icon(
                     onPressed: _bio,
                     icon: const Icon(Icons.fingerprint),

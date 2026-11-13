@@ -92,7 +92,8 @@ class Tx {
   bool get isCredit => direction == 'credit';
 
   /// Money that left (or entered) the account including any service charge.
-  int get totalMinor => isCredit ? amountMinor : amountMinor + serviceChargeMinor;
+  int get totalMinor =>
+      isCredit ? amountMinor : amountMinor + serviceChargeMinor;
 }
 
 /// Data for creating/updating a transaction. accountId and occurredAt may be
@@ -133,7 +134,8 @@ class TxInput {
   final String? description;
   final int? balanceMinor;
 
-  TxInput withAccount(int account, DateTime at, {String? defaultDescription}) => TxInput(
+  TxInput withAccount(int account, DateTime at, {String? defaultDescription}) =>
+      TxInput(
         accountId: account,
         direction: direction,
         amountMinor: amountMinor,

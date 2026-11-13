@@ -30,7 +30,8 @@ class _SetupState extends ConsumerState<SetupScreen> {
     final messenger = ScaffoldMessenger.of(context);
     if (on) {
       if (!await biometricAvailable()) {
-        messenger.showSnackBar(const SnackBar(content: Text('Biometrics not available on this device')));
+        messenger.showSnackBar(const SnackBar(
+            content: Text('Biometrics not available on this device')));
         return;
       }
       if (!await biometricAuth('Enable biometric unlock')) return;
@@ -47,8 +48,12 @@ class _SetupState extends ConsumerState<SetupScreen> {
         content: const Text(
             'Removes all stored original SMS in this workspace. Saved transactions are kept.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete')),
         ],
       ),
     );
@@ -123,7 +128,8 @@ class WorkspacesScreen extends ConsumerWidget {
       body: ListView(children: [
         for (final w in list)
           ListTile(
-            leading: Icon(w.id == current ? Icons.check_circle : Icons.circle_outlined),
+            leading: Icon(
+                w.id == current ? Icons.check_circle : Icons.circle_outlined),
             title: Text(w.name),
             subtitle: Text(w.type),
             onTap: () => switchWorkspace(ref, w.id),
@@ -157,7 +163,8 @@ class AccountsScreen extends ConsumerWidget {
                   isThreeLine: true,
                   trailing: Switch(
                     value: a.active,
-                    onChanged: (v) => ref.read(repoProvider)!.setAccountActive(a.id, v),
+                    onChanged: (v) =>
+                        ref.read(repoProvider)!.setAccountActive(a.id, v),
                   ),
                 ),
             ]),
@@ -197,11 +204,13 @@ class SendersScreen extends ConsumerWidget {
                   trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                     Switch(
                       value: s.active,
-                      onChanged: (v) => ref.read(repoProvider)!.setSourceActive(s.id, v),
+                      onChanged: (v) =>
+                          ref.read(repoProvider)!.setSourceActive(s.id, v),
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline),
-                      onPressed: () => ref.read(repoProvider)!.deleteSource(s.id),
+                      onPressed: () =>
+                          ref.read(repoProvider)!.deleteSource(s.id),
                     ),
                   ]),
                 ),

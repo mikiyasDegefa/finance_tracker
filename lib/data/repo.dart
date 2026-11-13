@@ -16,7 +16,8 @@ class Repo {
 
   int _now() => DateTime.now().millisecondsSinceEpoch;
   void notify() => _onChange();
-  String? _clean(String? s) => (s == null || s.trim().isEmpty) ? null : s.trim();
+  String? _clean(String? s) =>
+      (s == null || s.trim().isEmpty) ? null : s.trim();
 
   // ---------- settings ----------
   String? setting(String key) {
@@ -35,7 +36,8 @@ class Repo {
   // ---------- workspaces ----------
   List<Workspace> workspaces() => _d
       .select('SELECT id,name,type FROM workspaces ORDER BY id')
-      .map((r) => Workspace(r['id'] as int, r['name'] as String, r['type'] as String))
+      .map((r) =>
+          Workspace(r['id'] as int, r['name'] as String, r['type'] as String))
       .toList();
 
   int createWorkspace(String name, String type) {
@@ -125,7 +127,8 @@ class Repo {
         'UPDATE accounts SET bank=?,name=?,number_mask=?,currency=?,type=?,opening_minor=? '
         'WHERE id=? AND workspace_id=?',
         [bank, name, mask, currency, type, openingMinor, id, ws]);
-    _d.execute('UPDATE transactions SET currency=? WHERE account_id=?', [currency, id]);
+    _d.execute('UPDATE transactions SET currency=? WHERE account_id=?',
+        [currency, id]);
     notify();
   }
 
@@ -198,7 +201,8 @@ class Repo {
   }
 
   void deleteTemplate(int id) {
-    _d.execute('UPDATE sms_sources SET template_id=NULL WHERE template_id=?', [id]);
+    _d.execute(
+        'UPDATE sms_sources SET template_id=NULL WHERE template_id=?', [id]);
     _d.execute('DELETE FROM templates WHERE id=?', [id]);
     notify();
   }
@@ -213,7 +217,8 @@ class Repo {
       );
 
   List<Source> sources(int ws) => _d
-      .select('SELECT * FROM sms_sources WHERE workspace_id=? ORDER BY id', [ws])
+      .select(
+          'SELECT * FROM sms_sources WHERE workspace_id=? ORDER BY id', [ws])
       .map(_src)
       .toList();
 
@@ -236,7 +241,8 @@ class Repo {
   }
 
   void setSourceActive(int id, bool active) {
-    _d.execute('UPDATE sms_sources SET active=? WHERE id=?', [active ? 1 : 0, id]);
+    _d.execute(
+        'UPDATE sms_sources SET active=? WHERE id=?', [active ? 1 : 0, id]);
     notify();
   }
 
@@ -250,7 +256,8 @@ class Repo {
         id: r['id'] as int,
         sender: r['sender'] as String,
         body: r['body'] as String,
-        receivedAt: DateTime.fromMillisecondsSinceEpoch(r['received_at'] as int),
+        receivedAt:
+            DateTime.fromMillisecondsSinceEpoch(r['received_at'] as int),
         status: r['status'] as String,
         note: r['note'] as String?,
       );
@@ -270,13 +277,24 @@ class Repo {
     return r.isEmpty ? null : r.first['body'] as String;
   }
 
-  bool _insertSms(int ws, String sender, String body, DateTime at, String? providerId) {
-    final hash =
-        sha256.convert(utf8.encode('$sender|${at.millisecondsSinceEpoch}|$body')).toString();
+  bool _insertSms(
+      int ws, String sender, String body, DateTime at, String? providerId) {
+    final hash = sha256
+        .convert(utf8.encode('$sender|${at.millisecondsSinceEpoch}|$body'))
+        .toString();
     _d.execute(
         'INSERT OR IGNORE INTO sms_messages(workspace_id,sender,body,received_at,provider_id,'
         'body_hash,status,fetched_at) VALUES(?,?,?,?,?,?,?,?)',
-        [ws, sender, body, at.millisecondsSinceEpoch, providerId, hash, 'pending', _now()]);
+        [
+          ws,
+          sender,
+          body,
+          at.millisecondsSinceEpoch,
+          providerId,
+          hash,
+          'pending',
+          _now()
+        ]);
     return _d.updatedRows > 0;
   }
 
@@ -286,7 +304,8 @@ class Repo {
     _d.execute('BEGIN');
     try {
       for (final m in msgs) {
-        if (_insertSms(ws, m.sender, m.body, m.receivedAt, m.providerId)) added++;
+        if (_insertSms(ws, m.sender, m.body, m.receivedAt, m.providerId))
+          added++;
       }
       _d.execute('COMMIT');
     } catch (_) {
@@ -304,7 +323,8 @@ class Repo {
   }
 
   void _setSms(int id, String status, String? note) => _d.execute(
-      'UPDATE sms_messages SET status=?, note=? WHERE id=?', [status, note, id]);
+      'UPDATE sms_messages SET status=?, note=? WHERE id=?',
+      [status, note, id]);
 
   void ignoreSms(int id) {
     _setSms(id, 'ignored', null);
@@ -324,7 +344,8 @@ class Repo {
   ParseResult parseMessage(int ws, SmsMsg m) {
     final src = sourceForSender(ws, m.sender);
     if (src == null || !src.active) {
-      return ParseResult(errors: ['No active sender configured for ${m.sender}']);
+      return ParseResult(
+          errors: ['No active sender configured for ${m.sender}']);
     }
     if (src.templateId == null) {
       return const ParseResult(errors: ['No template assigned to this sender']);
@@ -338,8 +359,8 @@ class Repo {
         direction: r.direction!,
         amountMinor: r.amountMinor!,
         reference: r.reference,
-        counterparty:
-            r.counterparty ?? (r.direction == 'debit' ? r.toParty : r.fromParty),
+        counterparty: r.counterparty ??
+            (r.direction == 'debit' ? r.toParty : r.fromParty),
         counterpartyAccount: r.counterpartyAccount,
         fromParty: r.fromParty,
         toParty: r.toParty,
@@ -351,8 +372,10 @@ class Repo {
 
   /// Puts failed messages back in the queue (e.g. after fixing a template).
   void requeueFailed(int ws) {
-    _d.execute("UPDATE sms_messages SET status='pending', note=NULL "
-        "WHERE workspace_id=? AND status='failed'", [ws]);
+    _d.execute(
+        "UPDATE sms_messages SET status='pending', note=NULL "
+        "WHERE workspace_id=? AND status='failed'",
+        [ws]);
     notify();
   }
 
@@ -372,7 +395,8 @@ class Repo {
         s.failed++;
         continue;
       }
-      final auto = mode == 'automatic' || (mode == 'hybrid' && res.isHighConfidence);
+      final auto =
+          mode == 'automatic' || (mode == 'hybrid' && res.isHighConfidence);
       if (auto) {
         final st = _approve(ws, m.id, _draft(res));
         if (st == 'duplicate') {
@@ -428,7 +452,8 @@ class Repo {
         direction: r['direction'] as String,
         amountMinor: r['amount_minor'] as int,
         currency: r['currency'] as String,
-        occurredAt: DateTime.fromMillisecondsSinceEpoch(r['occurred_at'] as int),
+        occurredAt:
+            DateTime.fromMillisecondsSinceEpoch(r['occurred_at'] as int),
         reference: r['reference'] as String?,
         counterparty: r['counterparty'] as String?,
         counterpartyAccount: r['counterparty_account'] as String?,
@@ -563,7 +588,9 @@ class Repo {
 
   void deleteTransaction(int ws, int id) {
     final before = _txJson(id);
-    _d.execute('UPDATE transactions SET deleted=1 WHERE id=? AND workspace_id=?', [id, ws]);
+    _d.execute(
+        'UPDATE transactions SET deleted=1 WHERE id=? AND workspace_id=?',
+        [id, ws]);
     _audit(id, ws, 'delete', before, null);
     notify();
   }

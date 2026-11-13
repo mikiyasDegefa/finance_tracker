@@ -4,7 +4,8 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class PinResult {
-  const PinResult({required this.ok, this.lockedSeconds = 0, this.attemptsLeft = 0});
+  const PinResult(
+      {required this.ok, this.lockedSeconds = 0, this.attemptsLeft = 0});
   final bool ok;
   final int lockedSeconds;
   final int attemptsLeft;
@@ -70,7 +71,8 @@ class KeyStore {
   }
 
   Future<bool> biometricEnabled() async => (await _s.read(key: _kBio)) == '1';
-  Future<void> setBiometric(bool on) => _s.write(key: _kBio, value: on ? '1' : '0');
+  Future<void> setBiometric(bool on) =>
+      _s.write(key: _kBio, value: on ? '1' : '0');
 
   /// 256-bit SQLCipher key (hex). Created once, never leaves secure storage.
   Future<String> dbKeyHex() async {
