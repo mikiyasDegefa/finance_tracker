@@ -36,6 +36,12 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    lint {
+        // These two checks are the ones that crash lint's CommentDetector with
+        // "NoSuchMethodError: java.util.List.removeLast()" (AGP 9.3.x on JDK < 21).
+        disable += setOf("EasterEgg", "StopShip")
+    }
 }
 
 kotlin {

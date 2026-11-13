@@ -25,9 +25,9 @@ subprojects {
 // tasks are not required to produce release APKs/AABs, so skip them until the toolchain no
 // longer ships the broken lint.
 subprojects {
-    tasks.configureEach {
-        if (name.startsWith("lintVital")) {
-            enabled = false
+    tasks.configureEach { task ->
+        if (task.name.startsWith("lintVital")) {
+            task.enabled = false
         }
     }
 }
