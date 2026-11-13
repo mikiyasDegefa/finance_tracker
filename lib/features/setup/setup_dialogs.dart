@@ -5,7 +5,7 @@ import '../../data/models.dart';
 import '../../state/providers.dart';
 
 Future<void> showNewWorkspaceDialog(BuildContext context) => showDialog<void>(
-    context: context, builder: (_) => const _NewWorkspaceDialog());
+      context: context, builder: (_) => const _NewWorkspaceDialog());
 
 class _NewWorkspaceDialog extends ConsumerStatefulWidget {
   const _NewWorkspaceDialog();
@@ -43,15 +43,11 @@ class _NewWorkspaceState extends ConsumerState<_NewWorkspaceDialog> {
           ),
         ]),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
               if (_name.text.trim().isEmpty) return;
-              final id = ref
-                  .read(repoProvider)!
-                  .createWorkspace(_name.text.trim(), _type);
+              final id = ref.read(repoProvider)!.createWorkspace(_name.text.trim(), _type);
               switchWorkspace(ref, id);
               Navigator.pop(context);
             },
@@ -62,8 +58,7 @@ class _NewWorkspaceState extends ConsumerState<_NewWorkspaceDialog> {
 }
 
 Future<void> showAccountDialog(BuildContext context, {Account? edit}) =>
-    showDialog<void>(
-        context: context, builder: (_) => _AccountDialog(edit: edit));
+    showDialog<void>(context: context, builder: (_) => _AccountDialog(edit: edit));
 
 class _AccountDialog extends ConsumerStatefulWidget {
   const _AccountDialog({this.edit});
@@ -114,24 +109,13 @@ class _AccountState extends ConsumerState<_AccountDialog> {
     final bank = _bank.text.trim();
     final name = _name.text.trim();
     final mask = _mask.text.trim().isEmpty ? null : _mask.text.trim();
-    final cur =
-        _cur.text.trim().isEmpty ? 'ETB' : _cur.text.trim().toUpperCase();
+    final cur = _cur.text.trim().isEmpty ? 'ETB' : _cur.text.trim().toUpperCase();
     if (widget.edit == null) {
       repo.addAccount(ws,
-          bank: bank,
-          name: name,
-          mask: mask,
-          currency: cur,
-          type: _type,
-          openingMinor: opening);
+          bank: bank, name: name, mask: mask, currency: cur, type: _type, openingMinor: opening);
     } else {
       repo.updateAccount(ws, widget.edit!.id,
-          bank: bank,
-          name: name,
-          mask: mask,
-          currency: cur,
-          type: _type,
-          openingMinor: opening);
+          bank: bank, name: name, mask: mask, currency: cur, type: _type, openingMinor: opening);
     }
     Navigator.pop(context);
   }
@@ -141,24 +125,13 @@ class _AccountState extends ConsumerState<_AccountDialog> {
         title: Text(widget.edit == null ? 'New account' : 'Edit account'),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(
-                controller: _bank,
-                decoration:
-                    const InputDecoration(labelText: 'Bank (e.g. CBE)')),
-            TextField(
-                controller: _name,
-                decoration: const InputDecoration(labelText: 'Account name')),
-            TextField(
-                controller: _mask,
-                decoration: const InputDecoration(
-                    labelText: 'Masked number (optional)')),
-            TextField(
-                controller: _cur,
-                decoration: const InputDecoration(labelText: 'Currency')),
+            TextField(controller: _bank, decoration: const InputDecoration(labelText: 'Bank (e.g. CBE)')),
+            TextField(controller: _name, decoration: const InputDecoration(labelText: 'Account name')),
+            TextField(controller: _mask, decoration: const InputDecoration(labelText: 'Masked number (optional)')),
+            TextField(controller: _cur, decoration: const InputDecoration(labelText: 'Currency')),
             TextField(
               controller: _open,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(labelText: 'Opening balance'),
             ),
             DropdownButtonFormField<String>(
@@ -176,16 +149,14 @@ class _AccountState extends ConsumerState<_AccountDialog> {
           ]),
         ),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           FilledButton(onPressed: _save, child: const Text('Save')),
         ],
       );
 }
 
 Future<void> showAddSenderDialog(BuildContext context) => showDialog<void>(
-    context: context, builder: (_) => const _AddSenderDialog());
+      context: context, builder: (_) => const _AddSenderDialog());
 
 class _AddSenderDialog extends ConsumerStatefulWidget {
   const _AddSenderDialog();
@@ -245,10 +216,7 @@ class _AddSenderState extends ConsumerState<_AddSenderDialog> {
           DropdownButtonFormField<int>(
             value: _account,
             decoration: const InputDecoration(labelText: 'Account'),
-            items: [
-              for (final a in accs)
-                DropdownMenuItem(value: a.id, child: Text(a.label))
-            ],
+            items: [for (final a in accs) DropdownMenuItem(value: a.id, child: Text(a.label))],
             onChanged: (v) => setState(() => _account = v),
           ),
           DropdownButtonFormField<int?>(
@@ -258,19 +226,15 @@ class _AddSenderState extends ConsumerState<_AddSenderDialog> {
               const DropdownMenuItem<int?>(value: null, child: Text('None')),
               for (final t in tpls)
                 DropdownMenuItem<int?>(
-                    value: t.id,
-                    child: Text(t.name, overflow: TextOverflow.ellipsis)),
+                    value: t.id, child: Text(t.name, overflow: TextOverflow.ellipsis)),
             ],
             onChanged: (v) => setState(() => _template = v),
           ),
-          if (_error != null)
-            Text(_error!, style: const TextStyle(color: Colors.red)),
+          if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
         ]),
       ),
       actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         FilledButton(onPressed: _save, child: const Text('Save')),
       ],
     );

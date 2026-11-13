@@ -24,3 +24,38 @@ foreach ($f in "android/app/src/main/res/values/styles.xml", "android/app/src/ma
   }
 }
 Write-Host "Android patches applied. Commit the changes."
+
+# Disable AGP "lintVital" tasks: they crash on some JDKs (List.removeLast) and are not needed to build.
+$kts = Join-Path (Get-Location) "android/build.gradle.kts"
+$groovy = Join-Path (Get-Location) "android/build.gradle"
+$marker = "lintVital"
+if (Test-Path $kts) {
+  $t = [IO.File]::ReadAllText($kts)
+  if ($t -notmatch $marker) {
+    $t += @"
+
+// Workaround: lintVital crashes on some JDKs and is not needed for our builds.
+subprojects {
+    tasks.configureEach {
+        if (name.startsWith("lintVital")) enabled = false
+    }
+}
+"@
+    [IO.File]::WriteAllText($kts, $t, $utf8)
+  }
+} elseif (Test-Path $groovy) {
+  $t = [IO.File]::ReadAllText($groovy)
+  if ($t -notmatch $marker) {
+    $t += @"
+
+// Workaround: lintVital crashes on some JDKs and is not needed for our builds.
+subprojects {
+    tasks.configureEach { t ->
+        if (t.name.startsWith("lintVital")) { t.enabled = false }
+    }
+}
+"@
+    [IO.File]::WriteAllText($groovy, $t, $utf8)
+  }
+}
+Write-Host "Gradle lintVital workaround applied."

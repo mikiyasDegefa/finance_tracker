@@ -44,10 +44,8 @@ class TxFilter {
     final r = range;
     if (r != null) {
       final start = DateTime(r.start.year, r.start.month, r.start.day);
-      final end = DateTime(r.end.year, r.end.month, r.end.day)
-          .add(const Duration(days: 1));
-      if (t.occurredAt.isBefore(start) || !t.occurredAt.isBefore(end))
-        return false;
+      final end = DateTime(r.end.year, r.end.month, r.end.day).add(const Duration(days: 1));
+      if (t.occurredAt.isBefore(start) || !t.occurredAt.isBefore(end)) return false;
     }
     if (minMinor != null && t.amountMinor < minMinor!) return false;
     if (maxMinor != null && t.amountMinor > maxMinor!) return false;

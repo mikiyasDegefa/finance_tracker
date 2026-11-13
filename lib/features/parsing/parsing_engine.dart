@@ -30,8 +30,7 @@ class SmsTemplate {
   final String? toRegex;
   final String? counterpartyAccountRegex;
   final String? serviceChargeRegex;
-  final String?
-      receiptRegex; // optional; the first http(s) link is used otherwise
+  final String? receiptRegex; // optional; the first http(s) link is used otherwise
 }
 
 class ParseResult {

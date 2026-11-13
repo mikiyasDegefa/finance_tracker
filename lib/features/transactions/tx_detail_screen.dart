@@ -16,21 +16,16 @@ class TxDetailScreen extends ConsumerWidget {
   Future<void> _open(BuildContext context, String url) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final ok =
-          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      if (!ok)
-        messenger.showSnackBar(
-            const SnackBar(content: Text('Could not open the link')));
+      final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      if (!ok) messenger.showSnackBar(const SnackBar(content: Text('Could not open the link')));
     } catch (_) {
-      messenger.showSnackBar(
-          const SnackBar(content: Text('Could not open the link')));
+      messenger.showSnackBar(const SnackBar(content: Text('Could not open the link')));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final found =
-        ref.watch(transactionsProvider).where((t) => t.id == txId).toList();
+    final found = ref.watch(transactionsProvider).where((t) => t.id == txId).toList();
     if (found.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('Transaction')),
@@ -38,11 +33,8 @@ class TxDetailScreen extends ConsumerWidget {
       );
     }
     final Tx t = found.first;
-    final accounts = {
-      for (final a in ref.watch(accountsProvider)) a.id: a.label
-    };
-    final smsBody =
-        t.smsId == null ? null : ref.read(repoProvider)?.smsBody(t.smsId!);
+    final accounts = {for (final a in ref.watch(accountsProvider)) a.id: a.label};
+    final smsBody = t.smsId == null ? null : ref.read(repoProvider)?.smsBody(t.smsId!);
     final cur = t.currency;
 
     Widget row(String label, String? value, {Widget? trailing}) => value == null
@@ -50,8 +42,7 @@ class TxDetailScreen extends ConsumerWidget {
         : ListTile(
             dense: true,
             title: Text(label, style: Theme.of(context).textTheme.bodySmall),
-            subtitle: SelectableText(value,
-                style: Theme.of(context).textTheme.bodyLarge),
+            subtitle: SelectableText(value, style: Theme.of(context).textTheme.bodyLarge),
             trailing: trailing,
           );
 
@@ -78,17 +69,13 @@ class TxDetailScreen extends ConsumerWidget {
           ),
         ),
         row('Type', t.kind == null ? null : cap(t.kind!)),
-        row(
-            'Service charge',
-            t.serviceChargeMinor == 0
-                ? null
-                : formatMinor(t.serviceChargeMinor, cur)),
+        row('Service charge',
+            t.serviceChargeMinor == 0 ? null : formatMinor(t.serviceChargeMinor, cur)),
         row('Total ${t.isCredit ? 'received' : 'debited'}',
             t.serviceChargeMinor == 0 ? null : formatMinor(t.totalMinor, cur)),
         row('From', t.fromParty),
         row('To', t.toParty),
-        row(
-            t.isCredit ? 'Received from' : 'Sent to',
+        row(t.isCredit ? 'Received from' : 'Sent to',
             (t.counterparty == t.fromParty || t.counterparty == t.toParty)
                 ? null
                 : t.counterparty),
@@ -96,8 +83,7 @@ class TxDetailScreen extends ConsumerWidget {
         row('Account', accounts[t.accountId]),
         row('Date', fmtDate(t.occurredAt)),
         row('Reference', t.reference),
-        row('Balance after',
-            t.balanceMinor == null ? null : formatMinor(t.balanceMinor!, cur)),
+        row('Balance after', t.balanceMinor == null ? null : formatMinor(t.balanceMinor!, cur)),
         row('Receipt link', t.receiptUrl,
             trailing: t.receiptUrl == null
                 ? null
@@ -107,8 +93,8 @@ class TxDetailScreen extends ConsumerWidget {
                       icon: const Icon(Icons.copy),
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: t.receiptUrl!));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Link copied')));
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(const SnackBar(content: Text('Link copied')));
                       },
                     ),
                     IconButton(

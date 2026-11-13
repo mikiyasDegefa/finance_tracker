@@ -28,9 +28,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           child: ListView(shrinkWrap: true, children: [
             for (final w in list)
               ListTile(
-                leading: Icon(w.id == current
-                    ? Icons.check_circle
-                    : Icons.circle_outlined),
+                leading: Icon(w.id == current ? Icons.check_circle : Icons.circle_outlined),
                 title: Text(w.name),
                 subtitle: Text(w.type),
                 onTap: () {
@@ -93,13 +91,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-          NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined), label: 'Transactions'),
+          NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'Transactions'),
           NavigationDestination(icon: Icon(Icons.sms_outlined), label: 'SMS'),
-          NavigationDestination(
-              icon: Icon(Icons.settings_outlined), label: 'Setup'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Setup'),
         ],
       ),
     );

@@ -24,11 +24,8 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
       _snack('This platform cannot read SMS. Use "Paste SMS" instead.');
       return;
     }
-    final senders = ref
-        .read(sourcesProvider)
-        .where((s) => s.active)
-        .map((s) => s.sender)
-        .toSet();
+    final senders =
+        ref.read(sourcesProvider).where((s) => s.active).map((s) => s.sender).toSet();
     if (senders.isEmpty) {
       _snack('Add at least one SMS sender in Setup first.');
       return;
@@ -71,13 +68,11 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
           DropdownButton<String>(
             value: mode,
             items: const [
-              DropdownMenuItem(
-                  value: 'manual', child: Text('Manual (review all)')),
+              DropdownMenuItem(value: 'manual', child: Text('Manual (review all)')),
               DropdownMenuItem(value: 'hybrid', child: Text('Hybrid')),
               DropdownMenuItem(value: 'automatic', child: Text('Automatic')),
             ],
-            onChanged: (v) =>
-                ref.read(repoProvider)!.setSetting('mode', v ?? 'hybrid'),
+            onChanged: (v) => ref.read(repoProvider)!.setSetting('mode', v ?? 'hybrid'),
           ),
         ]),
       ),
@@ -114,13 +109,10 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
                   final m = list[i];
                   return ListTile(
                     onTap: () => showDialog<void>(
-                        context: context,
-                        builder: (_) => SmsReviewDialog(msg: m)),
+                        context: context, builder: (_) => SmsReviewDialog(msg: m)),
                     leading: _statusIcon(m.status),
-                    title:
-                        Text('${m.sender} · ${m.status.replaceAll('_', ' ')}'),
-                    subtitle: Text(m.body,
-                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                    title: Text('${m.sender} · ${m.status.replaceAll('_', ' ')}'),
+                    subtitle: Text(m.body, maxLines: 2, overflow: TextOverflow.ellipsis),
                     trailing: Text(fmtDate(m.receivedAt).substring(5, 10)),
                   );
                 },
@@ -204,14 +196,11 @@ class _PasteState extends ConsumerState<_PasteSmsDialog> {
             maxLines: 5,
             decoration: const InputDecoration(labelText: 'SMS text'),
           ),
-          if (_error != null)
-            Text(_error!, style: const TextStyle(color: Colors.red)),
+          if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
         ]),
       ),
       actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         FilledButton(onPressed: _save, child: const Text('Add')),
       ],
     );
@@ -243,8 +232,7 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
     final repo = ref.read(repoProvider)!;
     _res = repo.parseMessage(ref.read(workspaceIdProvider)!, widget.msg);
     _dir = _res.direction ?? 'debit';
-    _amount.text =
-        _res.amountMinor == null ? '' : formatMinor(_res.amountMinor!);
+    _amount.text = _res.amountMinor == null ? '' : formatMinor(_res.amountMinor!);
     _ref.text = _res.reference ?? '';
     _cp.text = _res.counterparty ??
         (_dir == 'debit' ? _res.toParty : _res.fromParty) ??
@@ -287,8 +275,7 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
         );
     Navigator.pop(context);
     messenger.showSnackBar(SnackBar(
-        content:
-            Text(st == 'processed' ? 'Transaction saved' : 'Not saved: $st')));
+        content: Text(st == 'processed' ? 'Transaction saved' : 'Not saved: $st')));
   }
 
   @override
@@ -299,8 +286,7 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
       if (_res.keyword != null) 'Keyword: ${_res.keyword}',
       if (_res.fromParty != null) 'From: ${_res.fromParty}',
       if (_res.toParty != null) 'To: ${_res.toParty}',
-      if (_res.counterpartyAccount != null)
-        'Account: ${_res.counterpartyAccount}',
+      if (_res.counterpartyAccount != null) 'Account: ${_res.counterpartyAccount}',
       if (_res.serviceChargeMinor != null)
         'Service charge: ${formatMinor(_res.serviceChargeMinor!)}',
       if (_res.receiptUrl != null) 'Receipt: ${_res.receiptUrl}',
@@ -310,11 +296,9 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
       content: SingleChildScrollView(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SelectableText(m.body),
-          if (m.note != null)
-            Text(m.note!, style: const TextStyle(color: Colors.orange)),
+          if (m.note != null) Text(m.note!, style: const TextStyle(color: Colors.orange)),
           if (_res.errors.isNotEmpty && _editable)
-            Text(_res.errors.join('; '),
-                style: const TextStyle(color: Colors.red)),
+            Text(_res.errors.join('; '), style: const TextStyle(color: Colors.red)),
           if (_editable) ...[
             const Divider(),
             if (extras.isNotEmpty) Text(extras.join('\n')),
@@ -328,30 +312,23 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
             ),
             TextField(
               controller: _amount,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(labelText: 'Amount'),
             ),
-            TextField(
-                controller: _ref,
-                decoration: const InputDecoration(labelText: 'Reference')),
+            TextField(controller: _ref, decoration: const InputDecoration(labelText: 'Reference')),
             TextField(
                 controller: _cp,
-                decoration: const InputDecoration(
-                    labelText: 'Name (sent to / received from)')),
+                decoration: const InputDecoration(labelText: 'Name (sent to / received from)')),
             TextField(
                 controller: _remark,
                 maxLines: 2,
                 decoration: const InputDecoration(labelText: 'Remark')),
-            if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
+            if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
           ],
         ]),
       ),
       actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close')),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
         TextButton(
           onPressed: () {
             repo.deleteSms(m.id);
@@ -367,8 +344,7 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
             },
             child: const Text('Ignore'),
           ),
-        if (_editable)
-          FilledButton(onPressed: _save, child: const Text('Save transaction')),
+        if (_editable) FilledButton(onPressed: _save, child: const Text('Save transaction')),
       ],
     );
   }

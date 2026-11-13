@@ -34,8 +34,7 @@ void main() {
 
   test('debit message', () {
     final r = ParsingEngine.parse(
-        'ETB 300.00 was debited from your account. Txn 99887766. Balance ETB 4,700.00',
-        _t);
+        'ETB 300.00 was debited from your account. Txn 99887766. Balance ETB 4,700.00', _t);
     expect(r.direction, 'debit');
     expect(r.amountMinor, 30000);
     expect(r.reference, '99887766');
