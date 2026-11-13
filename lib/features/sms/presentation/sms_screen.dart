@@ -231,6 +231,7 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
   final _amount = TextEditingController();
   final _ref = TextEditingController();
   final _cp = TextEditingController();
+  final _remark = TextEditingController();
   String? _error;
 
   bool get _editable =>
@@ -245,7 +246,9 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
     _amount.text =
         _res.amountMinor == null ? '' : formatMinor(_res.amountMinor!);
     _ref.text = _res.reference ?? '';
-    _cp.text = _res.counterparty ?? '';
+    _cp.text = _res.counterparty ??
+        (_dir == 'debit' ? _res.toParty : _res.fromParty) ??
+        '';
   }
 
   @override
@@ -253,6 +256,7 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
     _amount.dispose();
     _ref.dispose();
     _cp.dispose();
+    _remark.dispose();
     super.dispose();
   }
 
@@ -266,10 +270,20 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
     final st = ref.read(repoProvider)!.approveSms(
           ref.read(workspaceIdProvider)!,
           widget.msg.id,
-          direction: _dir,
-          amountMinor: minor,
-          reference: _ref.text,
-          counterparty: _cp.text,
+          TxInput(
+            direction: _dir,
+            amountMinor: minor,
+            reference: _ref.text,
+            counterparty: _cp.text,
+            counterpartyAccount: _res.counterpartyAccount,
+            fromParty: _res.fromParty,
+            toParty: _res.toParty,
+            kind: _res.keyword,
+            serviceChargeMinor: _res.serviceChargeMinor ?? 0,
+            receiptUrl: _res.receiptUrl,
+            remark: _remark.text,
+            balanceMinor: _res.balanceMinor,
+          ),
         );
     Navigator.pop(context);
     messenger.showSnackBar(SnackBar(
@@ -281,6 +295,16 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
   Widget build(BuildContext context) {
     final m = widget.msg;
     final repo = ref.read(repoProvider)!;
+    final extras = <String>[
+      if (_res.keyword != null) 'Keyword: ${_res.keyword}',
+      if (_res.fromParty != null) 'From: ${_res.fromParty}',
+      if (_res.toParty != null) 'To: ${_res.toParty}',
+      if (_res.counterpartyAccount != null)
+        'Account: ${_res.counterpartyAccount}',
+      if (_res.serviceChargeMinor != null)
+        'Service charge: ${formatMinor(_res.serviceChargeMinor!)}',
+      if (_res.receiptUrl != null) 'Receipt: ${_res.receiptUrl}',
+    ];
     return AlertDialog(
       title: Text('${m.sender} · ${m.status.replaceAll('_', ' ')}'),
       content: SingleChildScrollView(
@@ -293,6 +317,7 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
                 style: const TextStyle(color: Colors.red)),
           if (_editable) ...[
             const Divider(),
+            if (extras.isNotEmpty) Text(extras.join('\n')),
             SegmentedButton<String>(
               segments: const [
                 ButtonSegment(value: 'debit', label: Text('Debit')),
@@ -312,7 +337,12 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
                 decoration: const InputDecoration(labelText: 'Reference')),
             TextField(
                 controller: _cp,
-                decoration: const InputDecoration(labelText: 'Counterparty')),
+                decoration: const InputDecoration(
+                    labelText: 'Name (sent to / received from)')),
+            TextField(
+                controller: _remark,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Remark')),
             if (_error != null)
               Text(_error!, style: const TextStyle(color: Colors.red)),
           ],

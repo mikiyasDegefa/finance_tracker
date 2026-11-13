@@ -6,6 +6,7 @@ import '../features/setup/setup_screen.dart';
 import '../features/setup/setup_dialogs.dart';
 import '../features/sms/presentation/sms_screen.dart';
 import '../features/transactions/transactions_screen.dart';
+import '../features/transactions/tx_form.dart';
 import '../state/providers.dart';
 
 class HomeShell extends ConsumerStatefulWidget {

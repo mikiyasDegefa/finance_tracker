@@ -52,6 +52,11 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
   late final TextEditingController _balance;
   late final TextEditingController _reference;
   late final TextEditingController _cp;
+  late final TextEditingController _from;
+  late final TextEditingController _to;
+  late final TextEditingController _cpAcct;
+  late final TextEditingController _fee;
+  late final TextEditingController _receipt;
   final _sample = TextEditingController();
   ParseResult? _result;
 
@@ -69,6 +74,11 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
     _balance = TextEditingController(text: t?.balanceRegex ?? '');
     _reference = TextEditingController(text: t?.referenceRegex ?? '');
     _cp = TextEditingController(text: t?.counterpartyRegex ?? '');
+    _from = TextEditingController(text: t?.fromRegex ?? '');
+    _to = TextEditingController(text: t?.toRegex ?? '');
+    _cpAcct = TextEditingController(text: t?.counterpartyAccountRegex ?? '');
+    _fee = TextEditingController(text: t?.serviceChargeRegex ?? '');
+    _receipt = TextEditingController(text: t?.receiptRegex ?? '');
   }
 
   @override
@@ -81,6 +91,11 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
       _balance,
       _reference,
       _cp,
+      _from,
+      _to,
+      _cpAcct,
+      _fee,
+      _receipt,
       _sample
     ]) {
       c.dispose();
@@ -97,6 +112,12 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
         balanceRegex: _balance.text.trim().isEmpty ? null : _balance.text,
         referenceRegex: _reference.text.trim().isEmpty ? null : _reference.text,
         counterpartyRegex: _cp.text.trim().isEmpty ? null : _cp.text,
+        fromRegex: _from.text.trim().isEmpty ? null : _from.text,
+        toRegex: _to.text.trim().isEmpty ? null : _to.text,
+        counterpartyAccountRegex:
+            _cpAcct.text.trim().isEmpty ? null : _cpAcct.text,
+        serviceChargeRegex: _fee.text.trim().isEmpty ? null : _fee.text,
+        receiptRegex: _receipt.text.trim().isEmpty ? null : _receipt.text,
       );
 
   void _save() {
@@ -136,7 +157,13 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
         _field(_balance, 'Balance regex (optional)'),
         _field(_reference, 'Reference regex (optional)',
             help: 'Used to prevent duplicates'),
-        _field(_cp, 'Counterparty regex (optional)'),
+        _field(_cp, 'Counterparty name regex (optional)'),
+        _field(_from, 'From regex (optional)', help: 'Who the money came from'),
+        _field(_to, 'To regex (optional)', help: 'Who the money was sent to'),
+        _field(_cpAcct, 'Recipient/sender account regex (optional)'),
+        _field(_fee, 'Service charge regex (optional)'),
+        _field(_receipt, 'Receipt link regex (optional)',
+            help: 'Leave empty to use the first http(s) link in the SMS'),
         const Divider(),
         Text('Test with a real SMS',
             style: Theme.of(context).textTheme.titleMedium),
@@ -162,6 +189,13 @@ class _EditorState extends ConsumerState<TemplateEditorScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Direction: ${r.direction ?? '-'}'),
+                    Text('Keyword: ${r.keyword ?? '-'}'),
+                    Text('From: ${r.fromParty ?? '-'}'),
+                    Text('To: ${r.toParty ?? '-'}'),
+                    Text('Recipient account: ${r.counterpartyAccount ?? '-'}'),
+                    Text(
+                        'Service charge: ${r.serviceChargeMinor == null ? '-' : formatMinor(r.serviceChargeMinor!)}'),
+                    Text('Receipt link: ${r.receiptUrl ?? '-'}'),
                     Text(
                         'Amount: ${r.amountMinor == null ? '-' : formatMinor(r.amountMinor!)}'),
                     Text(

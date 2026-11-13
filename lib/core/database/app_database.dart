@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
 import 'package:sqlite3/open.dart';
 import 'package:sqlite3/sqlite3.dart';
+import 'sample_template.dart';
 
 /// Encrypted (SQLCipher) database. Refuses to open if SQLCipher is missing,
 /// so financial data is never written unencrypted.
@@ -47,7 +48,46 @@ class AppDatabase {
         rethrow;
       }
     }
+    if (v < 2) {
+      db.execute('BEGIN');
+      try {
+        for (final s in _schemaV2) {
+          db.execute(s);
+        }
+        db.execute(
+            'UPDATE templates SET from_regex=?, to_regex=?, counterparty_account_regex=?, '
+            'service_charge_regex=?, debit_keywords=? WHERE name LIKE ?',
+            [
+              SampleTemplate.from,
+              SampleTemplate.to,
+              SampleTemplate.counterpartyAccount,
+              SampleTemplate.serviceCharge,
+              SampleTemplate.debit,
+              'Generic bank%',
+            ]);
+        db.execute('PRAGMA user_version = 2;');
+        db.execute('COMMIT');
+      } catch (_) {
+        db.execute('ROLLBACK');
+        rethrow;
+      }
+    }
   }
+
+  static const _schemaV2 = <String>[
+    'ALTER TABLE transactions ADD COLUMN kind TEXT',
+    'ALTER TABLE transactions ADD COLUMN from_party TEXT',
+    'ALTER TABLE transactions ADD COLUMN to_party TEXT',
+    'ALTER TABLE transactions ADD COLUMN counterparty_account TEXT',
+    'ALTER TABLE transactions ADD COLUMN service_charge_minor INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE transactions ADD COLUMN receipt_url TEXT',
+    'ALTER TABLE transactions ADD COLUMN remark TEXT',
+    'ALTER TABLE templates ADD COLUMN from_regex TEXT',
+    'ALTER TABLE templates ADD COLUMN to_regex TEXT',
+    'ALTER TABLE templates ADD COLUMN counterparty_account_regex TEXT',
+    'ALTER TABLE templates ADD COLUMN service_charge_regex TEXT',
+    'ALTER TABLE templates ADD COLUMN receipt_regex TEXT',
+  ];
 
   static const _schemaV1 = <String>[
     '''CREATE TABLE workspaces(

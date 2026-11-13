@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/money.dart';
+import '../../data/models.dart';
 import '../../state/providers.dart';
 
 Future<void> showNewWorkspaceDialog(BuildContext context) => showDialog<void>(
@@ -60,16 +61,18 @@ class _NewWorkspaceState extends ConsumerState<_NewWorkspaceDialog> {
       );
 }
 
-Future<void> showAddAccountDialog(BuildContext context) => showDialog<void>(
-    context: context, builder: (_) => const _AddAccountDialog());
+Future<void> showAccountDialog(BuildContext context, {Account? edit}) =>
+    showDialog<void>(
+        context: context, builder: (_) => _AccountDialog(edit: edit));
 
-class _AddAccountDialog extends ConsumerStatefulWidget {
-  const _AddAccountDialog();
+class _AccountDialog extends ConsumerStatefulWidget {
+  const _AccountDialog({this.edit});
+  final Account? edit;
   @override
-  ConsumerState<_AddAccountDialog> createState() => _AddAccountState();
+  ConsumerState<_AccountDialog> createState() => _AccountState();
 }
 
-class _AddAccountState extends ConsumerState<_AddAccountDialog> {
+class _AccountState extends ConsumerState<_AccountDialog> {
   final _bank = TextEditingController();
   final _name = TextEditingController();
   final _mask = TextEditingController();
@@ -77,6 +80,20 @@ class _AddAccountState extends ConsumerState<_AddAccountDialog> {
   final _open = TextEditingController(text: '0');
   String _type = 'bank';
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.edit;
+    if (e != null) {
+      _bank.text = e.bank;
+      _name.text = e.name;
+      _mask.text = e.numberMask ?? '';
+      _cur.text = e.currency;
+      _open.text = formatMinor(e.openingMinor);
+      _type = e.type;
+    }
+  }
 
   @override
   void dispose() {
@@ -92,22 +109,36 @@ class _AddAccountState extends ConsumerState<_AddAccountDialog> {
       setState(() => _error = 'Enter a name and a valid opening balance');
       return;
     }
-    ref.read(repoProvider)!.addAccount(
-          ref.read(workspaceIdProvider)!,
-          bank: _bank.text.trim(),
-          name: _name.text.trim(),
-          mask: _mask.text.trim().isEmpty ? null : _mask.text.trim(),
-          currency:
-              _cur.text.trim().isEmpty ? 'ETB' : _cur.text.trim().toUpperCase(),
+    final repo = ref.read(repoProvider)!;
+    final ws = ref.read(workspaceIdProvider)!;
+    final bank = _bank.text.trim();
+    final name = _name.text.trim();
+    final mask = _mask.text.trim().isEmpty ? null : _mask.text.trim();
+    final cur =
+        _cur.text.trim().isEmpty ? 'ETB' : _cur.text.trim().toUpperCase();
+    if (widget.edit == null) {
+      repo.addAccount(ws,
+          bank: bank,
+          name: name,
+          mask: mask,
+          currency: cur,
           type: _type,
-          openingMinor: opening,
-        );
+          openingMinor: opening);
+    } else {
+      repo.updateAccount(ws, widget.edit!.id,
+          bank: bank,
+          name: name,
+          mask: mask,
+          currency: cur,
+          type: _type,
+          openingMinor: opening);
+    }
     Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('New account'),
+        title: Text(widget.edit == null ? 'New account' : 'Edit account'),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(

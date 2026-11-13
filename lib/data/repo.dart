@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:sqlite3/sqlite3.dart';
 import '../core/database/app_database.dart';
+import '../core/database/sample_template.dart';
 import '../features/parsing/parsing_engine.dart';
 import '../features/sms/domain/sms_gateway.dart';
 import 'models.dart';
@@ -15,6 +16,8 @@ class Repo {
 
   int _now() => DateTime.now().millisecondsSinceEpoch;
   void notify() => _onChange();
+  String? _clean(String? s) =>
+      (s == null || s.trim().isEmpty) ? null : s.trim();
 
   // ---------- settings ----------
   String? setting(String key) {
@@ -43,16 +46,22 @@ class Repo {
     final id = _d.lastInsertRowId;
     _d.execute(
         'INSERT INTO templates(workspace_id,name,credit_keywords,debit_keywords,'
-        'amount_regex,balance_regex,reference_regex,counterparty_regex) '
-        'VALUES(?,?,?,?,?,?,?,?)',
+        'amount_regex,balance_regex,reference_regex,counterparty_regex,from_regex,to_regex,'
+        'counterparty_account_regex,service_charge_regex,receipt_regex) '
+        'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [
           id,
-          'Generic bank (sample - edit for your bank)',
-          'credited,received,deposited,credit',
-          'debited,withdrawn,paid,purchase,transferred,debit',
-          r'(?:ETB|Birr|USD)\s*([\d,]+(?:\.\d+)?)',
-          r'balance[^\d]{0,25}([\d,]+(?:\.\d+)?)',
-          r'\b(?:ref(?:erence)?|txn|trx|id)\b[^A-Za-z0-9]{0,5}([A-Za-z0-9]{6,})',
+          SampleTemplate.name,
+          SampleTemplate.credit,
+          SampleTemplate.debit,
+          SampleTemplate.amount,
+          SampleTemplate.balance,
+          SampleTemplate.reference,
+          null,
+          SampleTemplate.from,
+          SampleTemplate.to,
+          SampleTemplate.counterpartyAccount,
+          SampleTemplate.serviceCharge,
           null,
         ]);
     notify();
@@ -60,9 +69,11 @@ class Repo {
   }
 
   // ---------- accounts ----------
+  // Debits reduce the balance by amount + service charge.
   static const _accSql = '''
     SELECT a.*, a.opening_minor + COALESCE((SELECT SUM(CASE t.direction
-      WHEN 'credit' THEN t.amount_minor ELSE -t.amount_minor END)
+      WHEN 'credit' THEN t.amount_minor
+      ELSE -(t.amount_minor + t.service_charge_minor) END)
       FROM transactions t WHERE t.account_id=a.id AND t.deleted=0),0) AS balance
     FROM accounts a''';
 
@@ -105,6 +116,22 @@ class Repo {
     return id;
   }
 
+  void updateAccount(int ws, int id,
+      {required String bank,
+      required String name,
+      String? mask,
+      required String currency,
+      required String type,
+      required int openingMinor}) {
+    _d.execute(
+        'UPDATE accounts SET bank=?,name=?,number_mask=?,currency=?,type=?,opening_minor=? '
+        'WHERE id=? AND workspace_id=?',
+        [bank, name, mask, currency, type, openingMinor, id, ws]);
+    _d.execute('UPDATE transactions SET currency=? WHERE account_id=?',
+        [currency, id]);
+    notify();
+  }
+
   void setAccountActive(int id, bool active) {
     _d.execute('UPDATE accounts SET active=? WHERE id=?', [active ? 1 : 0, id]);
     notify();
@@ -120,6 +147,11 @@ class Repo {
         balanceRegex: r['balance_regex'] as String?,
         referenceRegex: r['reference_regex'] as String?,
         counterpartyRegex: r['counterparty_regex'] as String?,
+        fromRegex: r['from_regex'] as String?,
+        toRegex: r['to_regex'] as String?,
+        counterpartyAccountRegex: r['counterparty_account_regex'] as String?,
+        serviceChargeRegex: r['service_charge_regex'] as String?,
+        receiptRegex: r['receipt_regex'] as String?,
       );
 
   List<SmsTemplate> templates(int ws) => _d
@@ -141,19 +173,26 @@ class Repo {
       t.balanceRegex,
       t.referenceRegex,
       t.counterpartyRegex,
+      t.fromRegex,
+      t.toRegex,
+      t.counterpartyAccountRegex,
+      t.serviceChargeRegex,
+      t.receiptRegex,
     ];
     int id;
     if (t.id == null) {
       _d.execute(
-          'INSERT INTO templates(name,credit_keywords,debit_keywords,amount_regex,'
-          'balance_regex,reference_regex,counterparty_regex,workspace_id) '
-          'VALUES(?,?,?,?,?,?,?,?)',
+          'INSERT INTO templates(name,credit_keywords,debit_keywords,amount_regex,balance_regex,'
+          'reference_regex,counterparty_regex,from_regex,to_regex,counterparty_account_regex,'
+          'service_charge_regex,receipt_regex,workspace_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
           [...args, ws]);
       id = _d.lastInsertRowId;
     } else {
       _d.execute(
           'UPDATE templates SET name=?,credit_keywords=?,debit_keywords=?,amount_regex=?,'
-          'balance_regex=?,reference_regex=?,counterparty_regex=? WHERE id=? AND workspace_id=?',
+          'balance_regex=?,reference_regex=?,counterparty_regex=?,from_regex=?,to_regex=?,'
+          'counterparty_account_regex=?,service_charge_regex=?,receipt_regex=? '
+          'WHERE id=? AND workspace_id=?',
           [...args, t.id, ws]);
       id = t.id!;
     }
@@ -233,6 +272,11 @@ class Repo {
   SmsMsg smsById(int id) =>
       _sms(_d.select('SELECT * FROM sms_messages WHERE id=?', [id]).first);
 
+  String? smsBody(int id) {
+    final r = _d.select('SELECT body FROM sms_messages WHERE id=?', [id]);
+    return r.isEmpty ? null : r.first['body'] as String;
+  }
+
   bool _insertSms(
       int ws, String sender, String body, DateTime at, String? providerId) {
     final hash = sha256
@@ -311,6 +355,21 @@ class Repo {
     return ParsingEngine.parse(m.body, t);
   }
 
+  TxInput _draft(ParseResult r) => TxInput(
+        direction: r.direction!,
+        amountMinor: r.amountMinor!,
+        reference: r.reference,
+        counterparty: r.counterparty ??
+            (r.direction == 'debit' ? r.toParty : r.fromParty),
+        counterpartyAccount: r.counterpartyAccount,
+        fromParty: r.fromParty,
+        toParty: r.toParty,
+        kind: r.keyword,
+        serviceChargeMinor: r.serviceChargeMinor ?? 0,
+        receiptUrl: r.receiptUrl,
+        balanceMinor: r.balanceMinor,
+      );
+
   /// Puts failed messages back in the queue (e.g. after fixing a template).
   void requeueFailed(int ws) {
     _d.execute(
@@ -339,12 +398,7 @@ class Repo {
       final auto =
           mode == 'automatic' || (mode == 'hybrid' && res.isHighConfidence);
       if (auto) {
-        final st = _approve(ws, m.id,
-            direction: res.direction!,
-            amountMinor: res.amountMinor!,
-            reference: res.reference,
-            counterparty: res.counterparty,
-            balanceMinor: res.balanceMinor);
+        final st = _approve(ws, m.id, _draft(res));
         if (st == 'duplicate') {
           s.duplicate++;
         } else if (st == 'processed') {
@@ -361,12 +415,7 @@ class Repo {
     return s;
   }
 
-  String _approve(int ws, int smsId,
-      {required String direction,
-      required int amountMinor,
-      String? reference,
-      String? counterparty,
-      int? balanceMinor}) {
+  String _approve(int ws, int smsId, TxInput draft) {
     final m = smsById(smsId);
     final src = sourceForSender(ws, m.sender);
     if (src == null) {
@@ -375,17 +424,11 @@ class Repo {
     }
     try {
       _insertTx(
-        ws: ws,
-        accountId: src.accountId,
-        direction: direction,
-        amountMinor: amountMinor,
-        occurredAt: m.receivedAt,
-        reference: reference,
-        counterparty: counterparty,
-        description: 'SMS from ${m.sender}',
+        ws,
+        draft.withAccount(src.accountId, m.receivedAt,
+            defaultDescription: 'SMS from ${m.sender}'),
         source: 'sms',
         smsId: smsId,
-        balanceMinor: balanceMinor,
       );
       _setSms(smsId, 'processed', null);
       return 'processed';
@@ -396,16 +439,8 @@ class Repo {
   }
 
   /// Used by the review screen. Returns the resulting SMS status.
-  String approveSms(int ws, int smsId,
-      {required String direction,
-      required int amountMinor,
-      String? reference,
-      String? counterparty}) {
-    final st = _approve(ws, smsId,
-        direction: direction,
-        amountMinor: amountMinor,
-        reference: reference,
-        counterparty: counterparty);
+  String approveSms(int ws, int smsId, TxInput draft) {
+    final st = _approve(ws, smsId, draft);
     notify();
     return st;
   }
@@ -421,21 +456,27 @@ class Repo {
             DateTime.fromMillisecondsSinceEpoch(r['occurred_at'] as int),
         reference: r['reference'] as String?,
         counterparty: r['counterparty'] as String?,
+        counterpartyAccount: r['counterparty_account'] as String?,
+        fromParty: r['from_party'] as String?,
+        toParty: r['to_party'] as String?,
+        kind: r['kind'] as String?,
+        serviceChargeMinor: r['service_charge_minor'] as int,
+        receiptUrl: r['receipt_url'] as String?,
+        remark: r['remark'] as String?,
         category: r['category'] as String?,
         description: r['description'] as String?,
+        balanceMinor: r['balance_minor'] as int?,
+        smsId: r['sms_id'] as int?,
         source: r['source'] as String,
       );
 
-  List<Tx> transactions(int ws, {int limit = 500}) => _d
+  List<Tx> transactions(int ws, {int limit = 5000}) => _d
       .select(
           'SELECT * FROM transactions WHERE workspace_id=? AND deleted=0 '
           'ORDER BY occurred_at DESC, id DESC LIMIT ?',
           [ws, limit])
       .map(_tx)
       .toList();
-
-  String? _clean(String? s) =>
-      (s == null || s.trim().isEmpty) ? null : s.trim();
 
   String _txJson(int id) {
     final r = _d.select('SELECT * FROM transactions WHERE id=?', [id]);
@@ -460,105 +501,84 @@ class Repo {
     }
   }
 
-  int _insertTx({
-    required int ws,
-    required int accountId,
-    required String direction,
-    required int amountMinor,
-    required DateTime occurredAt,
-    String? reference,
-    String? counterparty,
-    String? category,
-    String? description,
-    required String source,
-    int? smsId,
-    int? balanceMinor,
-  }) {
-    final acc = account(accountId);
+  Account _ownAccount(int ws, int? accountId) {
+    final acc = accountId == null ? null : account(accountId);
     if (acc == null || acc.workspaceId != ws) {
       throw StateError('Account does not belong to this workspace');
     }
-    final ref = _clean(reference);
-    _checkDuplicate(accountId, ref);
+    return acc;
+  }
+
+  int _insertTx(int ws, TxInput t, {required String source, int? smsId}) {
+    final acc = _ownAccount(ws, t.accountId);
+    final ref = _clean(t.reference);
+    _checkDuplicate(acc.id, ref);
     _d.execute(
         'INSERT INTO transactions(workspace_id,account_id,direction,amount_minor,currency,'
-        'occurred_at,recorded_at,reference,counterparty,category,description,source,sms_id,balance_minor) '
-        'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        'occurred_at,recorded_at,reference,counterparty,category,description,source,sms_id,'
+        'balance_minor,kind,from_party,to_party,counterparty_account,service_charge_minor,'
+        'receipt_url,remark) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [
           ws,
-          accountId,
-          direction,
-          amountMinor,
+          acc.id,
+          t.direction,
+          t.amountMinor,
           acc.currency,
-          occurredAt.millisecondsSinceEpoch,
+          (t.occurredAt ?? DateTime.now()).millisecondsSinceEpoch,
           _now(),
           ref,
-          _clean(counterparty),
-          _clean(category),
-          _clean(description),
+          _clean(t.counterparty),
+          _clean(t.category),
+          _clean(t.description),
           source,
           smsId,
-          balanceMinor,
+          t.balanceMinor,
+          _clean(t.kind),
+          _clean(t.fromParty),
+          _clean(t.toParty),
+          _clean(t.counterpartyAccount),
+          t.serviceChargeMinor,
+          _clean(t.receiptUrl),
+          _clean(t.remark),
         ]);
     final id = _d.lastInsertRowId;
     _audit(id, ws, 'create', null, _txJson(id));
     return id;
   }
 
-  int addTransaction(int ws,
-      {required int accountId,
-      required String direction,
-      required int amountMinor,
-      required DateTime occurredAt,
-      String? reference,
-      String? counterparty,
-      String? category,
-      String? description}) {
-    final id = _insertTx(
-      ws: ws,
-      accountId: accountId,
-      direction: direction,
-      amountMinor: amountMinor,
-      occurredAt: occurredAt,
-      reference: reference,
-      counterparty: counterparty,
-      category: category,
-      description: description,
-      source: 'manual',
-    );
+  int addTransaction(int ws, TxInput t) {
+    final id = _insertTx(ws, t, source: 'manual');
     notify();
     return id;
   }
 
-  void updateTransaction(int ws, int id,
-      {required int accountId,
-      required String direction,
-      required int amountMinor,
-      required DateTime occurredAt,
-      String? reference,
-      String? counterparty,
-      String? category,
-      String? description}) {
-    final acc = account(accountId);
-    if (acc == null || acc.workspaceId != ws) {
-      throw StateError('Account does not belong to this workspace');
-    }
-    final ref = _clean(reference);
-    _checkDuplicate(accountId, ref, exceptId: id);
+  void updateTransaction(int ws, int id, TxInput t) {
+    final acc = _ownAccount(ws, t.accountId);
+    final ref = _clean(t.reference);
+    _checkDuplicate(acc.id, ref, exceptId: id);
     final before = _txJson(id);
     _d.execute(
         'UPDATE transactions SET account_id=?,direction=?,amount_minor=?,currency=?,occurred_at=?,'
-        'reference=?,counterparty=?,category=?,description=? WHERE id=? AND workspace_id=?',
+        'reference=?,counterparty=?,category=?,description=?,kind=?,from_party=?,to_party=?,'
+        'counterparty_account=?,service_charge_minor=?,receipt_url=?,remark=? '
+        'WHERE id=? AND workspace_id=?',
         [
-          accountId,
-          direction,
-          amountMinor,
+          acc.id,
+          t.direction,
+          t.amountMinor,
           acc.currency,
-          occurredAt.millisecondsSinceEpoch,
+          (t.occurredAt ?? DateTime.now()).millisecondsSinceEpoch,
           ref,
-          _clean(counterparty),
-          _clean(category),
-          _clean(description),
+          _clean(t.counterparty),
+          _clean(t.category),
+          _clean(t.description),
+          _clean(t.kind),
+          _clean(t.fromParty),
+          _clean(t.toParty),
+          _clean(t.counterpartyAccount),
+          t.serviceChargeMinor,
+          _clean(t.receiptUrl),
+          _clean(t.remark),
           id,
           ws,
         ]);
@@ -578,7 +598,7 @@ class Repo {
   ({int credit, int debit}) totals(int ws, DateTime from) {
     final r = _d.select(
         "SELECT COALESCE(SUM(CASE WHEN direction='credit' THEN amount_minor END),0) AS c, "
-        "COALESCE(SUM(CASE WHEN direction='debit' THEN amount_minor END),0) AS d "
+        "COALESCE(SUM(CASE WHEN direction='debit' THEN amount_minor + service_charge_minor END),0) AS d "
         'FROM transactions WHERE workspace_id=? AND deleted=0 AND occurred_at>=?',
         [ws, from.millisecondsSinceEpoch]).first;
     return (credit: r['c'] as int, debit: r['d'] as int);

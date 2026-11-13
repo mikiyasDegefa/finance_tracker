@@ -12,6 +12,11 @@ class SmsTemplate {
     this.balanceRegex,
     this.referenceRegex,
     this.counterpartyRegex,
+    this.fromRegex,
+    this.toRegex,
+    this.counterpartyAccountRegex,
+    this.serviceChargeRegex,
+    this.receiptRegex,
   });
   final int? id;
   final String name;
@@ -21,23 +26,41 @@ class SmsTemplate {
   final String? balanceRegex;
   final String? referenceRegex;
   final String? counterpartyRegex;
+  final String? fromRegex;
+  final String? toRegex;
+  final String? counterpartyAccountRegex;
+  final String? serviceChargeRegex;
+  final String?
+      receiptRegex; // optional; the first http(s) link is used otherwise
 }
 
 class ParseResult {
   const ParseResult({
     this.direction,
+    this.keyword,
     this.amountMinor,
     this.balanceMinor,
     this.reference,
     this.counterparty,
+    this.counterpartyAccount,
+    this.fromParty,
+    this.toParty,
+    this.serviceChargeMinor,
+    this.receiptUrl,
     this.currency,
     this.errors = const [],
   });
   final String? direction; // credit | debit
+  final String? keyword; // the matched keyword, e.g. "transferred"
   final int? amountMinor;
   final int? balanceMinor;
   final String? reference;
   final String? counterparty;
+  final String? counterpartyAccount;
+  final String? fromParty;
+  final String? toParty;
+  final int? serviceChargeMinor;
+  final String? receiptUrl;
   final String? currency;
   final List<String> errors;
 
@@ -46,10 +69,16 @@ class ParseResult {
 
   Map<String, Object?> toJson() => {
         'direction': direction,
+        'keyword': keyword,
         'amountMinor': amountMinor,
         'balanceMinor': balanceMinor,
         'reference': reference,
         'counterparty': counterparty,
+        'counterpartyAccount': counterpartyAccount,
+        'fromParty': fromParty,
+        'toParty': toParty,
+        'serviceChargeMinor': serviceChargeMinor,
+        'receiptUrl': receiptUrl,
         'currency': currency,
         'errors': errors,
       };
@@ -60,21 +89,25 @@ class ParsingEngine {
     final errors = <String>[];
     final lower = body.toLowerCase();
 
-    bool hasAny(String csv) => csv
-        .split(',')
-        .map((e) => e.trim().toLowerCase())
-        .where((e) => e.isNotEmpty)
-        .any((k) => lower.contains(k));
+    String? firstKeyword(String csv) {
+      for (final k in csv.split(',').map((e) => e.trim().toLowerCase())) {
+        if (k.isNotEmpty && lower.contains(k)) return k;
+      }
+      return null;
+    }
 
-    final credit = hasAny(t.creditKeywords);
-    final debit = hasAny(t.debitKeywords);
+    final ck = firstKeyword(t.creditKeywords);
+    final dk = firstKeyword(t.debitKeywords);
     String? direction;
-    if (credit && !debit) {
+    String? keyword;
+    if (ck != null && dk == null) {
       direction = 'credit';
-    } else if (debit && !credit) {
+      keyword = ck;
+    } else if (dk != null && ck == null) {
       direction = 'debit';
+      keyword = dk;
     } else {
-      errors.add(credit && debit
+      errors.add(ck != null && dk != null
           ? 'Both credit and debit keywords matched'
           : 'No credit/debit keyword matched');
     }
@@ -85,11 +118,21 @@ class ParsingEngine {
         final m = RegExp(pattern, caseSensitive: false, multiLine: true)
             .firstMatch(body);
         if (m == null) return null;
-        return m.groupCount >= 1 ? m.group(1) : m.group(0);
+        return (m.groupCount >= 1 ? m.group(1) : m.group(0))?.trim();
       } on FormatException {
         errors.add('Invalid $label regex');
         return null;
       }
+    }
+
+    String? text(String? pattern, String label) {
+      final v = extract(pattern, label);
+      return (v == null || v.isEmpty) ? null : v;
+    }
+
+    int? money(String? pattern, String label) {
+      final v = extract(pattern, label);
+      return v == null ? null : parseMinor(v);
     }
 
     int? amount;
@@ -101,10 +144,11 @@ class ParsingEngine {
       if (amount == null) errors.add('Amount "$rawAmount" is not a number');
     }
 
-    final rawBalance = extract(t.balanceRegex, 'balance');
-    final balance = rawBalance == null ? null : parseMinor(rawBalance);
-    final reference = extract(t.referenceRegex, 'reference')?.trim();
-    final counterparty = extract(t.counterpartyRegex, 'counterparty')?.trim();
+    var receipt = text(t.receiptRegex, 'receipt');
+    receipt ??= RegExp(r'https?://\S+', caseSensitive: false)
+        .firstMatch(body)
+        ?.group(0)
+        ?.replaceAll(RegExp(r'[.,;)\]]+$'), '');
 
     var currency = RegExp(r'\b(ETB|USD|EUR|GBP|Birr)\b', caseSensitive: false)
         .firstMatch(body)
@@ -114,11 +158,17 @@ class ParsingEngine {
 
     return ParseResult(
       direction: direction,
+      keyword: keyword,
       amountMinor: amount,
-      balanceMinor: balance,
-      reference: (reference == null || reference.isEmpty) ? null : reference,
-      counterparty:
-          (counterparty == null || counterparty.isEmpty) ? null : counterparty,
+      balanceMinor: money(t.balanceRegex, 'balance'),
+      reference: text(t.referenceRegex, 'reference'),
+      counterparty: text(t.counterpartyRegex, 'counterparty'),
+      counterpartyAccount:
+          text(t.counterpartyAccountRegex, 'counterparty account'),
+      fromParty: text(t.fromRegex, 'from'),
+      toParty: text(t.toRegex, 'to'),
+      serviceChargeMinor: money(t.serviceChargeRegex, 'service charge'),
+      receiptUrl: receipt,
       currency: currency,
       errors: errors,
     );

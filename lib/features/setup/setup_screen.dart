@@ -148,7 +148,7 @@ class AccountsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Accounts')),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => showAddAccountDialog(context),
+        onPressed: () => showAccountDialog(context),
         child: const Icon(Icons.add),
       ),
       body: list.isEmpty
@@ -156,9 +156,11 @@ class AccountsScreen extends ConsumerWidget {
           : ListView(children: [
               for (final a in list)
                 ListTile(
+                  onTap: () => showAccountDialog(context, edit: a),
                   title: Text(a.label),
                   subtitle: Text(
-                      '${a.currency} · ${a.type} · balance ${formatMinor(a.balanceMinor)}'),
+                      '${a.currency} · ${a.type} · balance ${formatMinor(a.balanceMinor)}\nTap to edit'),
+                  isThreeLine: true,
                   trailing: Switch(
                     value: a.active,
                     onChanged: (v) =>
