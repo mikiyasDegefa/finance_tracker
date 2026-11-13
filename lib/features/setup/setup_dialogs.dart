@@ -184,17 +184,20 @@ class _AccountState extends ConsumerState<_AccountDialog> {
       );
 }
 
-Future<void> showAddSenderDialog(BuildContext context) => showDialog<void>(
-    context: context, builder: (_) => const _AddSenderDialog());
+Future<void> showAddSenderDialog(BuildContext context, {Source? edit}) =>
+    showDialog<void>(
+        context: context, builder: (_) => _AddSenderDialog(edit: edit));
 
 class _AddSenderDialog extends ConsumerStatefulWidget {
-  const _AddSenderDialog();
+  const _AddSenderDialog({this.edit});
+  final Source? edit;
   @override
   ConsumerState<_AddSenderDialog> createState() => _AddSenderState();
 }
 
 class _AddSenderState extends ConsumerState<_AddSenderDialog> {
   final _sender = TextEditingController();
+  final _category = TextEditingController();
   int? _account;
   int? _template;
   String? _error;
@@ -202,15 +205,23 @@ class _AddSenderState extends ConsumerState<_AddSenderDialog> {
   @override
   void initState() {
     super.initState();
+    final e = widget.edit;
     final accs = ref.read(accountsProvider).where((a) => a.active).toList();
     if (accs.isNotEmpty) _account = accs.first.id;
     final tpls = ref.read(templatesProvider);
     if (tpls.isNotEmpty) _template = tpls.first.id;
+    if (e != null) {
+      _sender.text = e.sender;
+      _account = e.accountId;
+      _template = e.templateId;
+      _category.text = e.category ?? '';
+    }
   }
 
   @override
   void dispose() {
     _sender.dispose();
+    _category.dispose();
     super.dispose();
   }
 
@@ -220,8 +231,16 @@ class _AddSenderState extends ConsumerState<_AddSenderDialog> {
       return;
     }
     try {
-      ref.read(repoProvider)!.addSource(
-          ref.read(workspaceIdProvider)!, _sender.text, _account!, _template);
+      final repo = ref.read(repoProvider)!;
+      final ws = ref.read(workspaceIdProvider)!;
+      final edit = widget.edit;
+      if (edit == null) {
+        repo.addSource(ws, _sender.text, _account!, _template,
+            category: _category.text);
+      } else {
+        repo.updateSource(ws, edit.id, _sender.text, _account!, _template,
+            category: _category.text);
+      }
       Navigator.pop(context);
     } catch (_) {
       setState(() => _error = 'This sender is already configured');
@@ -233,7 +252,7 @@ class _AddSenderState extends ConsumerState<_AddSenderDialog> {
     final accs = ref.watch(accountsProvider).where((a) => a.active).toList();
     final tpls = ref.watch(templatesProvider);
     return AlertDialog(
-      title: const Text('New SMS sender'),
+      title: Text(widget.edit == null ? 'New SMS sender' : 'Edit SMS sender'),
       content: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
@@ -262,6 +281,12 @@ class _AddSenderState extends ConsumerState<_AddSenderDialog> {
                     child: Text(t.name, overflow: TextOverflow.ellipsis)),
             ],
             onChanged: (v) => setState(() => _template = v),
+          ),
+          TextField(
+            controller: _category,
+            decoration: const InputDecoration(
+                labelText: 'Category (optional)',
+                helperText: 'Applied to transactions created from this sender'),
           ),
           if (_error != null)
             Text(_error!, style: const TextStyle(color: Colors.red)),

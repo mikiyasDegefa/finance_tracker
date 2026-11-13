@@ -72,7 +72,24 @@ class AppDatabase {
         rethrow;
       }
     }
+    if (v < 3) {
+      db.execute('BEGIN');
+      try {
+        for (final s in _schemaV3) {
+          db.execute(s);
+        }
+        db.execute('PRAGMA user_version = 3;');
+        db.execute('COMMIT');
+      } catch (_) {
+        db.execute('ROLLBACK');
+        rethrow;
+      }
+    }
   }
+
+  static const _schemaV3 = <String>[
+    'ALTER TABLE sms_sources ADD COLUMN category TEXT',
+  ];
 
   static const _schemaV2 = <String>[
     'ALTER TABLE transactions ADD COLUMN kind TEXT',

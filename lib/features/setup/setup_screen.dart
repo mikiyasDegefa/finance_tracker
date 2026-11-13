@@ -198,9 +198,11 @@ class SendersScreen extends ConsumerWidget {
           : ListView(children: [
               for (final s in list)
                 ListTile(
+                  onTap: () => showAddSenderDialog(context, edit: s),
                   title: Text(s.sender),
                   subtitle: Text(
-                      '${accs[s.accountId] ?? '?'} · template: ${tpls[s.templateId] ?? 'none'}'),
+                      '${accs[s.accountId] ?? '?'} · template: ${tpls[s.templateId] ?? 'none'}'
+                      '${s.category == null ? '' : ' · category: ${s.category}'}'),
                   trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                     Switch(
                       value: s.active,

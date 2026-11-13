@@ -38,12 +38,16 @@ class Source {
     required this.accountId,
     required this.templateId,
     required this.active,
+    this.category,
   });
   final int id;
   final String sender;
   final int accountId;
   final int? templateId;
   final bool active;
+
+  /// Default category applied to transactions created from this sender.
+  final String? category;
 }
 
 class Tx {
@@ -134,7 +138,8 @@ class TxInput {
   final String? description;
   final int? balanceMinor;
 
-  TxInput withAccount(int account, DateTime at, {String? defaultDescription}) =>
+  TxInput withAccount(int account, DateTime at,
+          {String? defaultDescription, String? defaultCategory}) =>
       TxInput(
         accountId: account,
         direction: direction,
@@ -149,7 +154,7 @@ class TxInput {
         serviceChargeMinor: serviceChargeMinor,
         receiptUrl: receiptUrl,
         remark: remark,
-        category: category,
+        category: category ?? defaultCategory,
         description: description ?? defaultDescription,
         balanceMinor: balanceMinor,
       );
@@ -177,9 +182,11 @@ class ProcessSummary {
   int review = 0;
   int failed = 0;
   int duplicate = 0;
+  int skipped = 0;
   @override
   String toString() =>
-      'Saved $saved · review $review · failed $failed · duplicates $duplicate';
+      'Saved $saved · review $review · failed $failed · duplicates $duplicate'
+      '${skipped == 0 ? '' : ' · skipped $skipped'}';
 }
 
 class DuplicateException implements Exception {

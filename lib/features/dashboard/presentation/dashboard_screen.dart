@@ -4,17 +4,79 @@ import '../../../core/money.dart';
 import '../../../state/providers.dart';
 import '../../transactions/transactions_screen.dart';
 
-class DashboardScreen extends ConsumerWidget {
+enum DashboardPeriod { day, month }
+
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardState();
+}
+
+class _DashboardState extends ConsumerState<DashboardScreen> {
+  DashboardPeriod _period = DashboardPeriod.month;
+  DateTime _anchor = DateTime.now();
+
+  /// First moment of the selected day or month.
+  DateTime get _start => _period == DashboardPeriod.day
+      ? DateTime(_anchor.year, _anchor.month, _anchor.day)
+      : DateTime(_anchor.year, _anchor.month, 1);
+
+  /// First moment after the selected period.
+  DateTime get _end => _period == DashboardPeriod.day
+      ? _start.add(const Duration(days: 1))
+      : DateTime(_start.year, _start.month + 1, 1);
+
+  bool get _isCurrent {
+    final now = DateTime.now();
+    final s = _start;
+    if (_period == DashboardPeriod.day) {
+      return s.year == now.year && s.month == now.month && s.day == now.day;
+    }
+    return s.year == now.year && s.month == now.month;
+  }
+
+  String get _label {
+    final s = _start;
+    if (_period == DashboardPeriod.day) {
+      return '${_isCurrent ? 'Today' : 'Day'} '
+          '(${s.year}-${_two(s.month)}-${_two(s.day)})';
+    }
+    return '${_isCurrent ? 'This month' : 'Month'} '
+        '(${s.year}-${_two(s.month)})';
+  }
+
+  void _step(int direction) => setState(() {
+        _anchor = _period == DashboardPeriod.day
+            ? _start.add(Duration(days: direction))
+            : DateTime(_start.year, _start.month + direction, 1);
+      });
+
+  void _selectPeriod(DashboardPeriod period) => setState(() {
+        _period = period;
+        _anchor = DateTime.now();
+      });
+
+  @override
+  Widget build(BuildContext context) {
     final all = ref.watch(accountsProvider);
     final active = all.where((a) => a.active).toList();
-    final totals = ref.watch(monthTotalsProvider);
-    final recent = ref.watch(transactionsProvider).take(5).toList();
+    final txs = ref.watch(transactionsProvider);
+    final recent = txs.take(5).toList();
     final names = {for (final a in all) a.id: a.label};
-    final month = DateTime.now();
+
+    var credit = 0;
+    var debit = 0;
+    for (final t in txs) {
+      if (t.occurredAt.isBefore(_start) || !t.occurredAt.isBefore(_end)) {
+        continue;
+      }
+      if (t.isCredit) {
+        credit += t.amountMinor;
+      } else {
+        debit += t.totalMinor;
+      }
+    }
 
     return ListView(padding: const EdgeInsets.all(16), children: [
       if (all.isEmpty)
@@ -31,15 +93,44 @@ class DashboardScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(
-                'This month (${month.year}-${month.month.toString().padLeft(2, '0')})',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
+            Text(_label, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            SegmentedButton<DashboardPeriod>(
+              segments: const [
+                ButtonSegment(value: DashboardPeriod.day, label: Text('Day')),
+                ButtonSegment(
+                    value: DashboardPeriod.month, label: Text('Month')),
+              ],
+              selected: {_period},
+              onSelectionChanged: (s) => _selectPeriod(s.first),
+            ),
             Row(children: [
-              Expanded(child: _Figure('Credits', totals.credit, Colors.green)),
-              Expanded(child: _Figure('Debits', totals.debit, Colors.red)),
-              Expanded(
-                  child: _Figure('Net', totals.credit - totals.debit, null)),
+              IconButton(
+                tooltip: _period == DashboardPeriod.day
+                    ? 'Previous day'
+                    : 'Previous month',
+                onPressed: () => _step(-1),
+                icon: const Icon(Icons.chevron_left),
+              ),
+              const Spacer(),
+              if (!_isCurrent)
+                TextButton(
+                  onPressed: () => setState(() => _anchor = DateTime.now()),
+                  child: Text(
+                      _period == DashboardPeriod.day ? 'Today' : 'This month'),
+                ),
+              IconButton(
+                tooltip:
+                    _period == DashboardPeriod.day ? 'Next day' : 'Next month',
+                onPressed: _isCurrent ? null : () => _step(1),
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ]),
+            const SizedBox(height: 4),
+            Row(children: [
+              Expanded(child: _Figure('Credits', credit, Colors.green)),
+              Expanded(child: _Figure('Debits', debit, Colors.red)),
+              Expanded(child: _Figure('Net', credit - debit, null)),
             ]),
           ]),
         ),
@@ -67,6 +158,8 @@ class DashboardScreen extends ConsumerWidget {
     ]);
   }
 }
+
+String _two(int v) => v.toString().padLeft(2, '0');
 
 class _Figure extends StatelessWidget {
   const _Figure(this.label, this.minor, this.color);

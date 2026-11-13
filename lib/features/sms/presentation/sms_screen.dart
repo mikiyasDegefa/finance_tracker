@@ -59,6 +59,13 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
     _snack(repo.processPending(ws).toString());
   }
 
+  /// Saves every stored SMS that parses cleanly with its sender's template.
+  void _saveAllParsed() {
+    final repo = ref.read(repoProvider)!;
+    final ws = ref.read(workspaceIdProvider)!;
+    _snack(repo.saveAllParsed(ws).toString());
+  }
+
   @override
   Widget build(BuildContext context) {
     final list = ref.watch(smsListProvider);
@@ -94,6 +101,11 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
                 context: context, builder: (_) => const _PasteSmsDialog()),
             icon: const Icon(Icons.content_paste),
             label: const Text('Paste SMS'),
+          ),
+          TextButton.icon(
+            onPressed: _saveAllParsed,
+            icon: const Icon(Icons.done_all),
+            label: const Text('Save parsed'),
           ),
           TextButton(onPressed: _retry, child: const Text('Retry failed')),
         ]),

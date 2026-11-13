@@ -214,6 +214,7 @@ class Repo {
         accountId: r['account_id'] as int,
         templateId: r['template_id'] as int?,
         active: (r['active'] as int) == 1,
+        category: r['category'] as String?,
       );
 
   List<Source> sources(int ws) => _d
@@ -229,14 +230,31 @@ class Repo {
     return r.isEmpty ? null : _src(r.first);
   }
 
-  void addSource(int ws, String sender, int accountId, int? templateId) {
+  void addSource(int ws, String sender, int accountId, int? templateId,
+      {String? category}) {
     final acc = account(accountId);
     if (acc == null || acc.workspaceId != ws) {
       throw StateError('Account does not belong to this workspace');
     }
     _d.execute(
-        'INSERT INTO sms_sources(workspace_id,sender,account_id,template_id) VALUES(?,?,?,?)',
-        [ws, sender.trim(), accountId, templateId]);
+        'INSERT INTO sms_sources(workspace_id,sender,account_id,template_id,category) '
+        'VALUES(?,?,?,?,?)',
+        [ws, sender.trim(), accountId, templateId, _clean(category)]);
+    notify();
+  }
+
+  /// Updates a sender, including the category SMS transactions inherit.
+  void updateSource(
+      int ws, int id, String sender, int accountId, int? templateId,
+      {String? category}) {
+    final acc = account(accountId);
+    if (acc == null || acc.workspaceId != ws) {
+      throw StateError('Account does not belong to this workspace');
+    }
+    _d.execute(
+        'UPDATE sms_sources SET sender=?,account_id=?,template_id=?,category=? '
+        'WHERE id=? AND workspace_id=?',
+        [sender.trim(), accountId, templateId, _clean(category), id, ws]);
     notify();
   }
 
@@ -426,7 +444,8 @@ class Repo {
       _insertTx(
         ws,
         draft.withAccount(src.accountId, m.receivedAt,
-            defaultDescription: 'SMS from ${m.sender}'),
+            defaultDescription: 'SMS from ${m.sender}',
+            defaultCategory: src.category),
         source: 'sms',
         smsId: smsId,
       );
@@ -436,6 +455,36 @@ class Repo {
       _setSms(smsId, 'duplicate', e.message);
       return 'duplicate';
     }
+  }
+
+  /// Saves every stored SMS that parses cleanly with its sender's template.
+  /// Messages that do not parse are left untouched so they can be reviewed.
+  ProcessSummary saveAllParsed(int ws) {
+    final s = ProcessSummary();
+    final rows = _d.select(
+        "SELECT * FROM sms_messages WHERE workspace_id=? "
+        "AND status IN ('pending','awaiting_review') ORDER BY received_at",
+        [ws]);
+    for (final r in rows) {
+      final m = _sms(r);
+      final res = parseMessage(ws, m);
+      _d.execute('UPDATE sms_messages SET parsed_json=? WHERE id=?',
+          [jsonEncode(res.toJson()), m.id]);
+      if (!res.isValid) {
+        s.skipped++;
+        continue;
+      }
+      final st = _approve(ws, m.id, _draft(res));
+      if (st == 'processed') {
+        s.saved++;
+      } else if (st == 'duplicate') {
+        s.duplicate++;
+      } else {
+        s.failed++;
+      }
+    }
+    notify();
+    return s;
   }
 
   /// Used by the review screen. Returns the resulting SMS status.
