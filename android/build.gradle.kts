@@ -25,16 +25,10 @@ subprojects {
 // tasks are not required to produce release APKs/AABs, so skip them until the toolchain no
 // longer ships the broken lint.
 subprojects {
-    tasks.configureEach { task ->
-        if (task.name.startsWith("lintVital")) {
-            task.enabled = false
-            logger.lifecycle("Skipping ${task.path} (AGP lint crash workaround, issue 522845800)")
-        }
-    }
-    // Eager fallback: also disable the task the moment AGP registers it.
-    tasks.whenTaskAdded { task ->
-        if (task.name.startsWith("lintVital")) {
-            task.enabled = false
+    tasks.configureEach {
+        if (name.startsWith("lintVital")) {
+            enabled = false
+            logger.lifecycle("Skipping $path (AGP lint crash workaround, issue 522845800)")
         }
     }
 }
