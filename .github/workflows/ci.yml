@@ -19,4 +19,3 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze --no-fatal-infos
       - run: flutter test --coverage
-      

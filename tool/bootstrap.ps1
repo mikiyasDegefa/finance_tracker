@@ -5,6 +5,9 @@ $ErrorActionPreference = "Stop"
 flutter create --org $Org --project-name finance_tracker --platforms android,ios .
 flutter pub get
 
+# Remove the default counter-app test; it references a MyApp class we do not have.
+Remove-Item -Force -ErrorAction SilentlyContinue test/widget_test.dart
+
 $pkg = "$Org.finance_tracker"
 $dir = "android/app/src/main/kotlin/" + ($Org -replace '\.', '/') + "/finance_tracker"
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
@@ -25,6 +28,8 @@ if ($manifest -notmatch "READ_SMS") {
   $manifest = ([regex]'<application').Replace($manifest, $perms.TrimEnd(), 1)
   [IO.File]::WriteAllText($manifestPath, $manifest, $utf8)
 }
+
+& "$PSScriptRoot/apply_android_patches.ps1"
 
 # iOS Face ID usage string can't be added on Windows; the CI/mac step or manual edit handles it:
 Write-Host "NOTE: add NSFaceIDUsageDescription to ios/Runner/Info.plist (see README)."

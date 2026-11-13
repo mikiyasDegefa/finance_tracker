@@ -2,6 +2,19 @@
 
 Local-first, encrypted transaction tracker.
 
+## What works now (v0.2)
+PIN lock with lockout + optional biometrics, SQLCipher-encrypted database (key in Keystore/Keychain),
+multiple workspaces (isolated queries), accounts with calculated balances, configured SMS senders,
+Android SMS fetch (configured senders only), paste-SMS (works on iOS too), template-based parser with
+tester, manual/hybrid/automatic processing, review screen, duplicate prevention (SMS hash + reference),
+manual transactions, edit/delete with audit trail, dashboard.
+
+**Not built yet:** backup/restore, cloud sync, budgets/goals, double-entry ledger, transfers,
+incoming-SMS receiver/WorkManager, PIN change.
+
+**Existing repo?** After pulling this version run `.\tool\apply_android_patches.ps1`.
+Templates are samples: tune regexes with real (anonymised) SMS from your banks.
+
 ## Platform behaviour
 | Capability | Android | iOS |
 |---|---|---|
