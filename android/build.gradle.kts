@@ -28,6 +28,13 @@ subprojects {
     tasks.configureEach { task ->
         if (task.name.startsWith("lintVital")) {
             task.enabled = false
+            logger.lifecycle("Skipping ${task.path} (AGP lint crash workaround, issue 522845800)")
+        }
+    }
+    // Eager fallback: also disable the task the moment AGP registers it.
+    tasks.whenTaskAdded { task ->
+        if (task.name.startsWith("lintVital")) {
+            task.enabled = false
         }
     }
 }
