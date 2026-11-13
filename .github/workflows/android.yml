@@ -40,9 +40,6 @@ jobs:
       - run: flutter pub get
       - run: flutter test
 
-      - name: Show Gradle JVM
-        run: bash android/gradlew --version
-
       - name: Decode signing keystore (optional)
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
