@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/money.dart';
+import '../../../data/models.dart';
 import '../../../state/providers.dart';
 import '../../transactions/transactions_screen.dart';
 
@@ -16,6 +17,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardState extends ConsumerState<DashboardScreen> {
   DashboardPeriod _period = DashboardPeriod.month;
   DateTime _anchor = DateTime.now();
+  int? _selectedAccountId;
 
   /// First moment of the selected day or month.
   DateTime get _start => _period == DashboardPeriod.day
@@ -65,10 +67,22 @@ class _DashboardState extends ConsumerState<DashboardScreen> {
     final recent = txs.take(5).toList();
     final names = {for (final a in all) a.id: a.label};
 
+    Account? selectedAccount;
+    for (final a in all) {
+      if (a.id == _selectedAccountId) {
+        selectedAccount = a;
+        break;
+      }
+    }
+    final scopeId = selectedAccount?.id;
+
     var credit = 0;
     var debit = 0;
     for (final t in txs) {
       if (t.occurredAt.isBefore(_start) || !t.occurredAt.isBefore(_end)) {
+        continue;
+      }
+      if (scopeId != null && t.accountId != scopeId) {
         continue;
       }
       if (t.isCredit) {
@@ -94,6 +108,11 @@ class _DashboardState extends ConsumerState<DashboardScreen> {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(_label, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 2),
+            Text(
+              selectedAccount == null ? 'All accounts' : selectedAccount.label,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const SizedBox(height: 8),
             SegmentedButton<DashboardPeriod>(
               segments: const [
@@ -137,15 +156,30 @@ class _DashboardState extends ConsumerState<DashboardScreen> {
       ),
       const SizedBox(height: 8),
       if (active.isNotEmpty) ...[
-        Text('Accounts', style: Theme.of(context).textTheme.titleMedium),
+        Row(children: [
+          Text('Accounts', style: Theme.of(context).textTheme.titleMedium),
+          const Spacer(),
+          if (selectedAccount != null)
+            TextButton(
+              onPressed: () => setState(() => _selectedAccountId = null),
+              child: const Text('Show all'),
+            ),
+        ]),
         for (final a in active)
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.account_balance_wallet_outlined),
+            selected: a.id == _selectedAccountId,
+            leading: Icon(
+              a.id == _selectedAccountId
+                  ? Icons.check_circle
+                  : Icons.account_balance_wallet_outlined,
+            ),
             title: Text(a.label),
             subtitle: Text(a.currency),
             trailing: Text(formatMinor(a.balanceMinor),
                 style: const TextStyle(fontWeight: FontWeight.bold)),
+            onTap: () => setState(() =>
+                _selectedAccountId = _selectedAccountId == a.id ? null : a.id),
           ),
       ],
       const SizedBox(height: 8),
