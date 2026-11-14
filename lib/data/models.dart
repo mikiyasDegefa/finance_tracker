@@ -29,6 +29,9 @@ class Account {
   final bool active;
   final int balanceMinor;
   String get label => bank.isEmpty ? name : '$bank · $name';
+
+  /// Short bank name for compact lists (e.g. CBE, Telebirr).
+  String get bankLabel => bank.trim().isEmpty ? name : bank.trim();
 }
 
 class Source {

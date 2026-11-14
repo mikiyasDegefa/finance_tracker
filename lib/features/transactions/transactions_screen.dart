@@ -6,19 +6,6 @@ import '../../state/providers.dart';
 import 'tx_detail_screen.dart';
 import 'tx_filter.dart';
 
-/// One-line summary of the SMS details: keyword, from/to, receipt, remark.
-String txSummary(Tx t) {
-  final parts = <String>[];
-  if (t.kind != null) parts.add(cap(t.kind!));
-  if (t.fromParty != null) parts.add('from ${t.fromParty}');
-  if (t.toParty != null) parts.add('to ${t.toParty}');
-  if (t.fromParty == null && t.toParty == null && t.counterparty != null) {
-    parts.add('${t.isCredit ? 'from' : 'to'} ${t.counterparty}');
-  }
-  if (t.counterpartyAccount != null) parts.add('acct ${t.counterpartyAccount}');
-  return parts.join(' · ');
-}
-
 class TxTile extends StatelessWidget {
   const TxTile(
       {super.key, required this.tx, required this.accountName, this.onTap});
@@ -32,25 +19,38 @@ class TxTile extends StatelessWidget {
         tx.description ??
         tx.category ??
         (tx.kind == null ? (tx.isCredit ? 'Credit' : 'Debit') : cap(tx.kind!));
-    final summary = txSummary(tx);
+    // Show only the sender (credit) or recipient (debit).
+    final party = tx.isCredit ? tx.fromParty : tx.toParty;
+    final partyLabel = party ?? tx.counterparty;
+    final partyLine = partyLabel != null
+        ? '${tx.isCredit ? 'From' : 'To'}: $partyLabel'
+        : (tx.counterpartyAccount == null
+            ? null
+            : 'Account: ${tx.counterpartyAccount}');
+    // Bank name followed by the reason (remark/category), e.g. "for package".
+    final reason = tx.remark ?? tx.category;
+    final meta = <String>[
+      accountName,
+      fmtDate(tx.occurredAt),
+      if (reason != null && reason.isNotEmpty) reason,
+    ].join(' · ');
     final extras = <String>[
       if (tx.serviceChargeMinor != 0)
         'service charge ${formatMinor(tx.serviceChargeMinor)}',
       if (tx.receiptUrl != null) 'receipt link',
-      if (tx.remark != null) 'remark: ${tx.remark}',
     ].join(' · ');
     return ListTile(
       onTap: onTap ??
           () => Navigator.of(context).push(MaterialPageRoute<void>(
               builder: (_) => TxDetailScreen(txId: tx.id))),
-      isThreeLine: summary.isNotEmpty || extras.isNotEmpty,
+      isThreeLine: partyLine != null || extras.isNotEmpty,
       leading: CircleAvatar(
           child: Icon(tx.isCredit ? Icons.south_west : Icons.north_east)),
       title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('$accountName · ${fmtDate(tx.occurredAt)}'),
-        if (summary.isNotEmpty)
-          Text(summary, maxLines: 2, overflow: TextOverflow.ellipsis),
+        if (partyLine != null)
+          Text(partyLine, maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(meta, maxLines: 2, overflow: TextOverflow.ellipsis),
         if (extras.isNotEmpty)
           Text(extras, maxLines: 2, overflow: TextOverflow.ellipsis),
       ]),
@@ -95,7 +95,9 @@ class _TransactionsState extends ConsumerState<TransactionsScreen> {
     final filter = ref.watch(txFilterProvider);
     final txs = ref.watch(filteredTransactionsProvider);
     final total = ref.watch(transactionsProvider).length;
-    final names = {for (final a in ref.watch(accountsProvider)) a.id: a.label};
+    final names = {
+      for (final a in ref.watch(accountsProvider)) a.id: a.bankLabel
+    };
     var credit = 0;
     var debit = 0;
     for (final t in txs) {

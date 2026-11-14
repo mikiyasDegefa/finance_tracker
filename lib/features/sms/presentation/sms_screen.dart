@@ -309,8 +309,9 @@ class _ReviewState extends ConsumerState<SmsReviewDialog> {
     final repo = ref.read(repoProvider)!;
     final extras = <String>[
       if (_res.keyword != null) 'Keyword: ${_res.keyword}',
-      if (_res.fromParty != null) 'From: ${_res.fromParty}',
-      if (_res.toParty != null) 'To: ${_res.toParty}',
+      // Only the sender matters on a credit, the recipient on a debit.
+      if (_dir == 'credit' && _res.fromParty != null) 'From: ${_res.fromParty}',
+      if (_dir == 'debit' && _res.toParty != null) 'To: ${_res.toParty}',
       if (_res.counterpartyAccount != null)
         'Account: ${_res.counterpartyAccount}',
       if (_res.serviceChargeMinor != null)

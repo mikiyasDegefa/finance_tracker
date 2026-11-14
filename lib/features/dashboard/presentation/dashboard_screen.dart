@@ -65,7 +65,7 @@ class _DashboardState extends ConsumerState<DashboardScreen> {
     final active = all.where((a) => a.active).toList();
     final txs = ref.watch(transactionsProvider);
     final recent = txs.take(5).toList();
-    final names = {for (final a in all) a.id: a.label};
+    final names = {for (final a in all) a.id: a.bankLabel};
 
     Account? selectedAccount;
     for (final a in all) {

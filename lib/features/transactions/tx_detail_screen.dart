@@ -85,13 +85,12 @@ class TxDetailScreen extends ConsumerWidget {
                 : formatMinor(t.serviceChargeMinor, cur)),
         row('Total ${t.isCredit ? 'received' : 'debited'}',
             t.serviceChargeMinor == 0 ? null : formatMinor(t.totalMinor, cur)),
-        row('From', t.fromParty),
-        row('To', t.toParty),
+        // A credit only has a sender; a debit only has a recipient.
         row(
-            t.isCredit ? 'Received from' : 'Sent to',
-            (t.counterparty == t.fromParty || t.counterparty == t.toParty)
-                ? null
-                : t.counterparty),
+            t.isCredit ? 'From' : 'To',
+            t.isCredit
+                ? (t.fromParty ?? t.counterparty)
+                : (t.toParty ?? t.counterparty)),
         row('Recipient / sender account', t.counterpartyAccount),
         row('Account', accounts[t.accountId]),
         row('Date', fmtDate(t.occurredAt)),
